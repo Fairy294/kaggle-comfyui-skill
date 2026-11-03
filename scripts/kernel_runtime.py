@@ -5,6 +5,7 @@ import datetime
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -213,9 +214,11 @@ def run(spec, workflow, task_id):
             ],
             cap=1500,
         )
+        node_paths = []
         for index, config in enumerate(spec["custom_nodes"]):
             target = workspace / "custom_nodes" / ("reviewed_node_" + str(index))
             clone_pinned(config, target)
+            node_paths.append(target)
             requirements = target / "requirements.txt"
             if requirements.exists():
                 command(
@@ -242,6 +245,23 @@ def run(spec, workflow, task_id):
                 ],
                 cap=900,
             )
+        if spec.get("runtime_profile") == "minimax-h3-t4-v1":
+            phase = "APPLYING_H3_COMPATIBILITY"
+            import h3_compat
+
+            report = h3_compat.apply(workspace, node_paths[0], node_paths[1])
+            atomic_json(output / "h3-compatibility.json", report)
+            phase = "VALIDATING_H3_GPU_COPY"
+            for device in range(2):
+                command(
+                    [
+                        sys.executable,
+                        str(workspace / "h3_gpu_copy_smoke.py"),
+                        str(device),
+                    ],
+                    cwd=workspace,
+                    cap=180,
+                )
         for entry in sources:
             base = workspace / ("models" if entry["kind"] == "models" else "input")
             target = base / entry["target"]
@@ -255,6 +275,16 @@ def run(spec, workflow, task_id):
         media_root.mkdir()
         phase = "STARTING_COMFYUI"
         server_log = (output / "comfy.log").open("w")
+        server_env = clean_environment()
+        if spec.get("runtime_profile") == "minimax-h3-t4-v1":
+            worker_logs = output / "sp-worker-logs"
+            worker_logs.mkdir()
+            server_env.update(
+                MINIMAX_SP_LOGDIR=str(worker_logs),
+                MINIMAX_SP_COLLECTIVE_TIMEOUT="3600",
+                MINIMAX_SP_STARTUP_TIMEOUT="900",
+                PYTHONFAULTHANDLER="1",
+            )
         process = subprocess.Popen(
             [
                 sys.executable,
@@ -269,9 +299,10 @@ def run(spec, workflow, task_id):
                 *spec["extra_comfy_args"],
             ],
             cwd=workspace,
-            env=clean_environment(),
+            env=server_env,
             stdout=server_log,
             stderr=subprocess.STDOUT,
+            start_new_session=spec.get("runtime_profile") == "minimax-h3-t4-v1",
         )
         ready_end = time.monotonic() + remaining(300)
         while True:
@@ -315,6 +346,12 @@ def run(spec, workflow, task_id):
             remaining(20)
             if process.poll() is not None:
                 raise RuntimeError("ComfyUI process terminated during inference")
+            if spec.get("runtime_profile") == "minimax-h3-t4-v1" and list(
+                (output / "sp-worker-logs").glob("rank*-failed.json")
+            ):
+                raise RuntimeError(
+                    "H3 worker exited; see sp-worker-logs before any retry"
+                )
             history = request_json("/history/" + prompt_id)
             if prompt_id in history:
                 item = history[prompt_id]
@@ -401,12 +438,24 @@ def run(spec, workflow, task_id):
         emit("failed", error_type=type(error).__name__, error=redact(str(error))[:2000])
         return 1
     finally:
-        if process is not None and process.poll() is None:
-            process.terminate()
-            try:
+        if process is not None:
+            if spec.get("runtime_profile") == "minimax-h3-t4-v1":
+                # The SP worker shares this isolated process group; do not leave
+                # a second GPU process running after parent failure/timeout.
+                for sig in [signal.SIGTERM, signal.SIGKILL]:
+                    try:
+                        os.killpg(process.pid, sig)
+                    except ProcessLookupError:
+                        break
+                    if sig == signal.SIGTERM:
+                        time.sleep(1)
                 process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=10)
+            elif process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=10)
         if server_log is not None:
             server_log.close()

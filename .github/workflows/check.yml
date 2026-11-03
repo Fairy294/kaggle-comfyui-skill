@@ -23,5 +23,7 @@ jobs:
         run: |
           python scripts/kaggle_comfy.py validate --spec assets/image.spec.json --workflow assets/image.workflow.json
           python scripts/kaggle_comfy.py validate --spec assets/video.spec.json --workflow assets/video.workflow.json
+          python scripts/kaggle_comfy.py validate --spec assets/anima-turbo.spec.json --workflow assets/anima-turbo.workflow.json
+          python scripts/kaggle_comfy.py validate --spec assets/h3-character-swap.spec.json --workflow assets/h3-character-swap.workflow.json
       - name: Public-file and secret-pattern audit
         run: python scripts/check_release.py

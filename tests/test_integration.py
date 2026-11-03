@@ -205,7 +205,7 @@ class LocalIntegrationTests(unittest.TestCase):
             self.assertFalse(task.exists())
 
     def test_both_template_specs_and_graphs_are_structurally_valid(self):
-        for mode in ["image", "video"]:
+        for mode in ["image", "video", "anima-turbo", "h3-character-swap"]:
             common.validate_spec(
                 common.read_json(ROOT / "assets" / (mode + ".spec.json"))
             )

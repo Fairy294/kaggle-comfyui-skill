@@ -8,7 +8,7 @@
 
 ## spec 字段
 
-所有字段均必填，未用的数组写 `[]`：
+下表原有字段均必填，未用数组写 `[]`；新增可选 `runtime_profile`，缺省为 `standard`。只有 `minimax-h3-t4-v1` 会启用固定双T4专用兼容配置，详见H3工作流说明：
 
 |字段|约束|
 |---|---|
@@ -23,7 +23,8 @@
 |inputs|同上；target 是 ComfyUI `input/` 下相对路径|
 |custom_nodes|纯 GitHub repo/revision 数组；会安装该提交的 requirements，属于受信任代码边界|
 |pip_packages|可选精确 `package==version` 字符串数组，不接收选项/URL/任意shell|
-|extra_comfy_args|有限白名单：lowvram/normalvram/cpu-vae/fp32-vae/fp16-vae/use-pytorch-cross-attention/disable-smart-memory/disable-pinned-memory（均带--）|
+|runtime_profile|可选：standard 或 minimax-h3-t4-v1；后者强制固定版本、两插件、T4与H3专用启动标志|
+|extra_comfy_args|普通 profile 有限白名单：lowvram/normalvram/cpu-vae/fp32-vae/fp16-vae/use-pytorch-cross-attention/disable-smart-memory/disable-pinned-memory（均带--）|
 
 挂载路径要先在 Kaggle Input 面板或 CPU-only notebook 确认，工具不会猜数据集 slug 与文件系统目录关系。哈希可用 `sha256sum file` 计算。零哈希示例不是真实模型 hash。
 
@@ -43,5 +44,5 @@
 - 私有 notebook 和输出仍会上传至 Kaggle，不适用于不能上云的数据。
 - ComfyUI/custom_nodes 是第三方任意代码边界，固定提交、审核来源再运行；不要在其环境配置其他业务凭证。工具会过滤常见凭证环境变量，但这不是沙箱，也不能阻止恶意代码主动访问云平台身份。
 - 上游 ComfyUI requirements 可能含范围依赖。固定 Git commit 不是完整依赖锁，首次运行记录 bootstrap.log 并按实际 torch/CUDA排错。不要盲目安装浮动 fork、远程shell脚本或关闭验证。
-- 新 runner 的脚本是本项目原创，不捆绑原私有素材、任何模型权重、H3修改后的第三方文件或聊天记录。Kaggle/ComfyUI/模型的各自条款仍适用。
+- 新 runner 的脚本是本项目原创，不捆绑原私有素材、任何模型权重、H3修改后的第三方完整文件或聊天记录；H3 profile 仅随附本项目原创兼容补丁代码，运行时对用户授权的固定上游checkout应用。Kaggle/ComfyUI/模型的各自条款仍适用。
 - 额度按当前账号官方返回，无“无限GPU”、账号池、刷时长或账户切换。TPU不等于CUDA；任务能否排队、网络、空间、GPU类型受平台影响。

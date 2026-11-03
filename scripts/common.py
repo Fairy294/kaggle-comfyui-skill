@@ -24,6 +24,26 @@ SPEC_KEYS = {
     "pip_packages",
     "extra_comfy_args",
 }
+H3_PROFILE = "minimax-h3-t4-v1"
+H3_COMFY_REVISION = "0b05cd8a3683cbf0c291b1472bb8b64da41de9ae"
+H3_PLUGINS = [
+    {
+        "repo": "https://github.com/leejet/ComfyUI-GGUF",
+        "revision": "373048b8403a7820620065210a691263d4da0a61",
+    },
+    {
+        "repo": "https://github.com/buqi-code/buqi-minimax-h3-multigpu",
+        "revision": "a864277f81ee7609972eb64cd1fb086f239d4c99",
+    },
+]
+H3_FLAGS = {
+    "--lowvram",
+    "--disable-async-offload",
+    "--force-fp32",
+    "--fp32-vae",
+    "--use-pytorch-cross-attention",
+}
+
 SAFE_FLAGS = {
     "--lowvram",
     "--normalvram",
@@ -94,7 +114,11 @@ def validate_repo(data):
 
 
 def validate_spec(data):
-    if not isinstance(data, dict) or set(data) != SPEC_KEYS or data["version"] != 1:
+    if (
+        not isinstance(data, dict)
+        or set(data) - {"runtime_profile"} != SPEC_KEYS
+        or data["version"] != 1
+    ):
         raise ValueError("Run spec requires the documented version1 fields only")
     if not re.fullmatch(r"[A-Za-z0-9_-]{3,50}", data["owner"]):
         raise ValueError("Invalid Kaggle owner")
@@ -167,9 +191,27 @@ def validate_spec(data):
             raise ValueError(
                 "Extra packages must use exact name==version, no URLs/options"
             )
+    profile = data.get("runtime_profile", "standard")
+    if profile not in {"standard", H3_PROFILE}:
+        raise ValueError("Unknown runtime profile")
+    if profile == H3_PROFILE:
+        if (
+            data["accelerator"] != "NvidiaTeslaT4"
+            or data["comfy"]
+            != {
+                "repo": "https://github.com/Comfy-Org/ComfyUI",
+                "revision": H3_COMFY_REVISION,
+            }
+            or data["custom_nodes"] != H3_PLUGINS
+            or set(data["extra_comfy_args"]) != H3_FLAGS
+        ):
+            raise ValueError(
+                "H3 profile requires the exact reviewed Comfy/GGUF/SP pins, T4 and launch flags"
+            )
+    allowed_flags = H3_FLAGS if profile == H3_PROFILE else SAFE_FLAGS
     if (
         not isinstance(data["extra_comfy_args"], list)
-        or any(x not in SAFE_FLAGS for x in data["extra_comfy_args"])
+        or any(x not in allowed_flags for x in data["extra_comfy_args"])
         or len(set(data["extra_comfy_args"])) != len(data["extra_comfy_args"])
     ):
         raise ValueError(

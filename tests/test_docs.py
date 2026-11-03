@@ -26,7 +26,7 @@ class ReadmeTests(unittest.TestCase):
             "video.spec.json",
         ]:
             self.assertIn(filename, readme)
-        self.assertIn("H3 专项工作流未包含", readme)
+        self.assertIn("H3 专项工作流已包含", readme)
         self.assertIn("尚未完成新的 Kaggle GPU 端到端实跑", readme)
         self.assertIn("--confirm-remote-execution", readme)
         self.assertIn("不是开箱即用", readme)
@@ -44,7 +44,15 @@ class ReadmeTests(unittest.TestCase):
 
     def test_workflow_inventory_and_documented_sample_sizes_match_assets(self):
         actual = sorted(path.name for path in (ROOT / "assets").glob("*.workflow.json"))
-        self.assertEqual(actual, ["image.workflow.json", "video.workflow.json"])
+        self.assertEqual(
+            actual,
+            [
+                "anima-turbo.workflow.json",
+                "h3-character-swap.workflow.json",
+                "image.workflow.json",
+                "video.workflow.json",
+            ],
+        )
         image = json.loads((ROOT / "assets/image.workflow.json").read_text())
         video = json.loads((ROOT / "assets/video.workflow.json").read_text())
         image_size = next(

@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "owner": "your-kaggle-user",
+  "accelerator": "NvidiaTeslaT4",
+  "timeout_seconds": 36000,
+  "comfy": {
+    "repo": "https://github.com/Comfy-Org/ComfyUI",
+    "revision": "0b05cd8a3683cbf0c291b1472bb8b64da41de9ae"
+  },
+  "datasets": [
+    "your-kaggle-user/private-models",
+    "your-kaggle-user/private-inputs"
+  ],
+  "parent_kernels": [],
+  "models": [
+    {
+      "source": "/kaggle/input/private-models/minimax_h3_hybrid_fl2va_ref2va_b25-49-int8.safetensors",
+      "target": "diffusion_models/minimax_h3_hybrid_fl2va_ref2va_b25-49-int8.safetensors",
+      "sha256": "a629cfea8d89a071b140c6e1935dc9a23e72de6badc18975a2bb9e6d1423d76d"
+    },
+    {
+      "source": "/kaggle/input/private-models/qwen3vl-32B-MiniMax-H3-Q2_K.gguf",
+      "target": "text_encoders/qwen3vl-32B-MiniMax-H3-Q2_K.gguf",
+      "sha256": "5bbc11d0b3ef197c98df2ce8f05de8fbb8eb5917cd91c33d0b59f93759b34914"
+    },
+    {
+      "source": "/kaggle/input/private-models/MiniMax-H3-encoder-mmproj-F16.gguf",
+      "target": "text_encoders/qwen3vl-32B-MiniMax-H3-mmproj-F16.gguf",
+      "sha256": "448b7ab3ca0b1f92a5ebca9cc6a4b56e7dbb45b0e313c9d34d8a1154eb49d7ea"
+    },
+    {
+      "source": "/kaggle/input/private-models/minimax_h3_video_vae_fp16.safetensors",
+      "target": "vae/minimax_h3_video_vae_fp16.safetensors",
+      "sha256": "7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522"
+    },
+    {
+      "source": "/kaggle/input/private-models/minimax_h3_audio_vae_fp32.safetensors",
+      "target": "vae/minimax_h3_audio_vae_fp32.safetensors",
+      "sha256": "8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48"
+    },
+    {
+      "source": "/kaggle/input/private-models/h3_character_swap_pro4500_1000.safetensors",
+      "target": "loras/h3_character_swap_pro4500_1000.safetensors",
+      "sha256": "4b2a3f420ae804c0aa3422761ff84dbd1bf52eef6900ffab6d2e66df63cb4e79"
+    },
+    {
+      "source": "/kaggle/input/private-models/minimax_h3_ref2v_turbo_8step_v1.1_768p_comfyui_bf16.safetensors",
+      "target": "loras/minimax_h3_ref2v_turbo_8step_v1.1_768p_comfyui_bf16.safetensors",
+      "sha256": "e56863a7524e0300729cbb7b64cc8b548d90698c1abbf7d83898b0122fbe1e81"
+    }
+  ],
+  "inputs": [
+    {
+      "source": "/kaggle/input/private-inputs/character.png",
+      "target": "character.png",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "source": "/kaggle/input/private-inputs/costume-reference.png",
+      "target": "costume-reference.png",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "source": "/kaggle/input/private-inputs/start-frame.png",
+      "target": "start-frame.png",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "source": "/kaggle/input/private-inputs/reference.mp4",
+      "target": "reference.mp4",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "custom_nodes": [
+    {
+      "repo": "https://github.com/leejet/ComfyUI-GGUF",
+      "revision": "373048b8403a7820620065210a691263d4da0a61"
+    },
+    {
+      "repo": "https://github.com/buqi-code/buqi-minimax-h3-multigpu",
+      "revision": "a864277f81ee7609972eb64cd1fb086f239d4c99"
+    }
+  ],
+  "pip_packages": [],
+  "extra_comfy_args": [
+    "--lowvram",
+    "--disable-async-offload",
+    "--force-fp32",
+    "--fp32-vae",
+    "--use-pytorch-cross-attention"
+  ],
+  "runtime_profile": "minimax-h3-t4-v1"
+}

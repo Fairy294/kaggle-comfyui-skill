@@ -16,6 +16,14 @@
 
 SaveVideo 在固定版本使用动态组合输入：format=auto，format.codec=auto。若目标版本不同，先确认该节点的 `/object_info`，不要把新旧schemas混用。模板是结构示例，未在本次GPU上执行，不能承诺画质或显存适配。ComfyUI自动使用单进程选中的GPU；并不会因Kaggle给两张T4就自动获得30GB合并显存。
 
+## Anima Turbo v1.1
+
+`assets/anima-turbo.workflow.json` 与同名前缀 spec：分离UNET/Qwen3_0.6B/QwenImageVAE，官方示例CLIPtype=stable_diffusion、EmptyLatentImage，1024×1024、10步、CFG1、Euler/simple。不是SDXL检查点。模型三hash已填，但账号路径需配置；非商业许可，见Anima专用说明。
+
+## H3 专项迁移
+
+`assets/h3-character-swap.workflow.json` 与spec：角色/服装/动作/原音轨 +真实frame0引导，固定双T4SP+GGUF，8步联合音视频，保存全部原生PNG。必须显式H3profile，兼容补丁与模型/输入要求详见H3专用说明。新runner迁移版未GPU复测，不宣称原专项运行与新版本等价。
+
 ## 用户自定义工作流
 
 1. 固定ComfyUI与所有插件提交、模型文件hash、模型许可。
@@ -26,6 +34,6 @@ SaveVideo 在固定版本使用动态组合输入：format=auto，format.codec=a
 
 ## 分段首尾帧
 
-此版本不自动改写任意图中的首帧节点。由Agent按模型接口把上一段真正交付的最后一张无损原生PNG挂载为下一段输入，parent_kernels引用准确前置任务，inputs记录该PNG的SHA256；再在自己的API图连接真实I2V/keyframe控制，不只是放进prompt。
+此版本不自动改写任意图中的首帧节点；内置H3图已经连接MiniMaxH3AddGuide(frame0)，但仍需选择正确的实际尾帧输入。由Agent按模型接口把上一段真正交付的最后一张无损原生PNG挂载为下一段输入，parent_kernels引用准确前置任务，inputs记录该PNG的SHA256；再在自己的API图连接真实I2V/keyframe控制，不只是放进prompt。
 
 例如第一段native0..119交付，第二段native0是重复边界、交付native1..120，则下一段应继承第二段native120，不是119、更不是采样器多出的123。末尾模型网格padding需排除，不让动作/音轨错位。实际输出会重绘：首帧引导不保证像素一致；比较生成首帧和尾帧的姿势、构图与速度后才能拼接。不要叠化或光流掩盖接缝、模糊或重复动作。

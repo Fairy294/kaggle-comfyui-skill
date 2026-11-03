@@ -65,13 +65,25 @@ def prepare(spec, workflow, root):
     reference = spec["owner"] + "/" + slug
     common_source = (HERE / "common.py").read_text()
     runtime_source = (HERE / "kernel_runtime.py").read_text()
+    profile_source = ""
+    if spec.get("runtime_profile") == "minimax-h3-t4-v1":
+        profile_source = (
+            '_h3 = types.ModuleType("h3_compat")\n'
+            'sys.modules["h3_compat"] = _h3\n'
+            "exec(" + repr((HERE / "h3_compat.py").read_text()) + ", _h3.__dict__)\n"
+        )
     source = (
         "# Generated standalone private ComfyUI batch job\n"
         "import json, sys, types\n"
         '_helpers = types.ModuleType("common")\n'
         'sys.modules["common"] = _helpers\n'
-        "exec(" + repr(common_source) + ", _helpers.__dict__)\n"
-        "exec(" + repr(runtime_source) + ", globals())\n"
+        "exec("
+        + repr(common_source)
+        + ", _helpers.__dict__)\n"
+        + profile_source
+        + "exec("
+        + repr(runtime_source)
+        + ", globals())\n"
         'if __name__ == "__main__":\n'
         "    raise SystemExit(run(json.loads("
         + repr(json.dumps(spec))
