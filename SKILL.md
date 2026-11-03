@@ -11,7 +11,7 @@ description: 在 Kaggle 官方免费额度内部署并运行 ComfyUI API 工作�
 
 ## 开始前
 
-1. 使用 `astrbot_execute_shell` 或当前环境的等效终端执行本目录下的脚本。Python 3.11+；本地校验仅用标准库。联机操作需要官方 `kaggle==2.2.4` CLI/SDK，已有新版本须先核验兼容性，不静默升级。
+1. 使用终端工具或系统命令行执行本目录下的脚本。Python 3.11+；本地校验仅用标准库。联机操作需要官方 `kaggle==2.2.4` CLI/SDK，已有新版本须先核验兼容性，不静默升级。
 2. 将源代码仓库保留为干净 Skill；运行文件放在独立、可写的开发目录。不要把任务、模型、个人图片、视频或凭证提交到 Git。
 3. 读取 [references/operations.md](references/operations.md)，核实账号、Kaggle 资格、输入挂载和授权。所有 Kaggle CLI/SDK 联机操作均需通过 API Key 鉴权，支持通过环境变量 `KAGGLE_API_TOKEN` 或凭证文件 `~/.kaggle/kaggle.json` 配置。凭证只由用户通过官方登录或安全环境配置；不读取、复述或上传凭证文件。
 4. 查询真实额度：`python scripts/kaggle_comfy.py quota`。30 小时 GPU /20 小时 TPU 不是保证值，以官方当前返回为准。此 CUDA 工作流不能把 TPU 时长直接当 GPU 使用。
@@ -26,10 +26,10 @@ description: 在 Kaggle 官方免费额度内部署并运行 ComfyUI API 工作�
 5. 离线准备：`python scripts/kaggle_comfy.py prepare --spec RUN.json --workflow WORKFLOW.json --jobs-dir /absolute/writable/jobs`。记录返回的任务目录与 UUID；`prepare` 不调用 Kaggle、不用 GPU。
 6. 在用户明确授权后，用已配置 Kaggle SDK 的同一个 Python 解释器运行：`python scripts/kaggle_comfy.py submit --job JOB_DIR --confirm-remote-execution`。提交前再次查询额度，要求“最大会话时长 +5分钟余量”不超过剩余额度。任务始终私有，自动带唯一 slug；只提交一次。超时/未知返回先按该 slug 核对远端，禁止删除本地提交标记后盲目重投。
 7. 先 `status --job JOB_DIR` 核对远端，随后 `logs --job JOB_DIR --seconds 20` 有界读取日志。运行中必须区分安装、等待服务、排队、生成和解码。只报告真实 `KAGGLE_COMFY` 事件；“GENERATING”与心跳不等于某个采样步数或完成百分比。
-8. 用户要求挂机时，使用宿主提供的 `future_task` 创建任务级定时检查，默认每小时；把任务 UUID、路径、精确命令、失败处理和交付要求写入 note，记录 job_id 并实际核验。**本仓库不会自己创建宿主定时任务**。完成或不可恢复失败后清除对应任务，不动无关计划。
+8. 用户要求挂机时，可使用环境提供的定时/异步任务机制（如系统的 cron、定时唤醒工具等）创建任务级定时检查，默认每小时；把任务 UUID、路径、精确命令、失败处理和交付要求写入任务说明，记录任务标识并实际核验。**本仓库不会自己创建宿主定时任务**。完成或不可恢复失败后清除对应任务，不动无关计划。
 9. 远端终态后 `download --job JOB_DIR`；继续或复查已下载文件用 `verify --job JOB_DIR`。核对 result 任务身份、工作流 hash、输出清单、文件大小和 SHA256。`COMPLETE` 仍可能只有失败诊断；以 `result.json` 为准。
 10. 读取 [references/quality-and-recovery.md](references/quality-and-recovery.md)，检查实际图片/视频与输入是否一致。只有技术校验、逐帧视觉与时序/接缝要求均通过才称验收成功。默认不加文字/水印/状态说明；将质量限制写在聊天里。
-11. 使用 `send_message_to_user` 发送实际产物或当前宿主的文件发送机制，不只发送路径。保留原始输出与证据；有缺陷可以交付明确说明的预览，但不得假称通过。
+11. 使用环境支持的文件发送工具或媒体交付机制向用户发送实际产物文件，不只发送路径。保留原始输出与证据；有缺陷可以交付明确说明的预览，但不得假称通过。
 
 ## 边界与限制
 
@@ -39,7 +39,7 @@ description: 在 Kaggle 官方免费额度内部署并运行 ComfyUI API 工作�
 - T4 任务不会自动把两张卡显存合并；仅显式 `minimax-h3-t4-v1` 使用指定双卡插件和 [scripts/h3_compat.py](scripts/h3_compat.py) 的固定源码兼容处理、两卡拷贝预检、原生帧导出。普通 profile 不套 H3 补丁。迁移版未做新的 GPU 端到端验证；原流程经验见 [references/h3-lessons.md](references/h3-lessons.md)。
 - 取消必须有官方精确会话 ID 与专用取消接口；此版本不猜 ID、不通过重启/删库“取消”，可在 Kaggle 的 Active sessions 中 Stop Session。仅删除定时巡检不会停止云端 GPU。
 - 有界超时、固定模型 hash 与严格解码只能保证技术层；不能保证无幻觉、手势清晰或像素级无缝。分段尾帧控制必须使用上一段**真正交付的最后原生帧**，去掉下一段重复边界与模型网格 padding。
-- 安装位置：将本目录作为 `kaggle-comfyui-skill` 放入当前 AstrBot 工作区的 `skills/`；或由管理员放入实例 Skill 目录并按宿主方式刷新。仓库发布不等于全局安装/启用，不擅自改宿主配置。
+- 安装位置：将本目录作为 `kaggle-comfyui-skill` 放入支持 Agent Skill 的工作区技能目录或实例 Skill 目录中并刷新。仓库发布不等于全局安装/启用，不擅自改宿主配置。
 
 ## 开发验证
 

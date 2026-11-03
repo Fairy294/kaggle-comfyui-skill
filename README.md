@@ -1,6 +1,6 @@
 # Kaggle ComfyUI Skill · 中文说明
 
-在 Kaggle 官方免费额度内跑 ComfyUI，生成图片或视频。支持查询额度、私有任务提交、状态查询、下载和文件校验；既可作为 AstrBot Skill，也可独立使用命令行。
+在 Kaggle 官方免费额度内跑 ComfyUI，生成图片或视频。支持查询额度、私有任务提交、状态查询、下载和文件校验；既可作为通用智能体技能（Agent Skill），也可独立使用命令行。
 
 ## 自带工作流
 
@@ -48,7 +48,7 @@ python scripts/kaggle_comfy.py logs --job JOB_DIR --seconds 20
 python scripts/kaggle_comfy.py download --job JOB_DIR
 ```
 
-AstrBot 用户可将整个仓库放到工作区 `skills/kaggle-comfyui-skill/` 并刷新 Skill；Agent 的操作规则见 [SKILL.md](SKILL.md)。
+智能体用户可将整个仓库放入支持的技能目录并加载 Skill；智能体（Agent）的操作规则见 [SKILL.md](SKILL.md)。
 
 ## 使用前须知
 
