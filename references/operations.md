@@ -4,6 +4,10 @@
 
 本地 Python 3.11+。离线 validate/prepare 仅用标准库；远程调用需要 `kaggle==2.2.4`，建议在用户已有虚拟环境中执行 `python -m pip install kaggle==2.2.4`，不要修改系统环境或自动替换现有版本。宿主需支持 POSIX flock（Linux/macOS）。官方CLI与SDK使用同一解释器：安装好后检查 `python -m pip show kaggle` 和 `kaggle -W quota --format json`。
 
+所有 Kaggle CLI/SDK 联机操作（配额查询、任务提交、状态轮询、日志流、产物拉取等）均需通过 API Key 进行身份认证。支持两种认证方式：
+- 方式 A（推荐）：设置环境变量 `KAGGLE_API_TOKEN`，值为用户 Kaggle API Key。
+- 方式 B：配置本地凭证文件 `~/.kaggle/kaggle.json`，写入 `{"username":"<USERNAME>","key":"<API_KEY>"}` 并限制权限为 `chmod 600 ~/.kaggle/kaggle.json`。
+
 不运行登录脚本、不扫描用户密码、不把 `~/.kaggle` 拷贝到仓库。用户通过 Kaggle 官方设置创建/配置令牌；CLI因认证失败停止时让用户在本机安全配置，不索取聊天密码或验证码。
 
 ## spec 字段

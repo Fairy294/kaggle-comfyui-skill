@@ -13,7 +13,7 @@ description: 在 Kaggle 官方免费额度内部署并运行 ComfyUI API 工作�
 
 1. 使用 `astrbot_execute_shell` 或当前环境的等效终端执行本目录下的脚本。Python 3.11+；本地校验仅用标准库。联机操作需要官方 `kaggle==2.2.4` CLI/SDK，已有新版本须先核验兼容性，不静默升级。
 2. 将源代码仓库保留为干净 Skill；运行文件放在独立、可写的开发目录。不要把任务、模型、个人图片、视频或凭证提交到 Git。
-3. 读取 [references/operations.md](references/operations.md)，核实账号、Kaggle 资格、输入挂载和授权。凭证只由用户通过官方登录或安全环境配置；不读取、复述或上传凭证文件。
+3. 读取 [references/operations.md](references/operations.md)，核实账号、Kaggle 资格、输入挂载和授权。所有 Kaggle CLI/SDK 联机操作均需通过 API Key 鉴权，支持通过环境变量 `KAGGLE_API_TOKEN` 或凭证文件 `~/.kaggle/kaggle.json` 配置。凭证只由用户通过官方登录或安全环境配置；不读取、复述或上传凭证文件。
 4. 查询真实额度：`python scripts/kaggle_comfy.py quota`。30 小时 GPU /20 小时 TPU 不是保证值，以官方当前返回为准。此 CUDA 工作流不能把 TPU 时长直接当 GPU 使用。
 5. 确认工作流、模型许可、分辨率、帧率、预计耗时、交付形式及是否允许消耗额度。不以“免费”为由自动启动；不轮换账号、绕过配额或修改平台限制。
 

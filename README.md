@@ -23,8 +23,15 @@ cd kaggle-comfyui-skill
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install kaggle==2.2.4
+
+# Kaggle CLI / SDK 联机操作必须配置 API Key 鉴权：
+# 方式 A：设置环境变量 export KAGGLE_API_TOKEN="YOUR_KAGGLE_API_KEY"
+# 方式 B：配置本地凭证文件 ~/.kaggle/kaggle.json，写入 {"username":"YOUR_USERNAME","key":"YOUR_KAGGLE_API_KEY"} 并设置权限 chmod 600 ~/.kaggle/kaggle.json
 python scripts/kaggle_comfy.py quota
 ```
+
+你可以把以下一句话发给你的智能体进行安装skill：
+> 请帮我安装并配置 kaggle-comfyui-skill：通过 git clone https://github.com/riyuexingchennnn/kaggle-comfyui-skill.git 将技能安装到 skills 目录，并在环境中配置 Kaggle API Key（设置环境变量 export KAGGLE_API_TOKEN="YOUR_KAGGLE_API_KEY" 或在 ~/.kaggle/kaggle.json 中写入 {"username":"YOUR_USERNAME","key":"YOUR_KAGGLE_API_KEY"}），完成依赖安装 kaggle==2.2.4 后运行 python scripts/kaggle_comfy.py quota 校验额度。
 
 不是开箱即用：复制所需配置，填写自己的账号、私有数据集、实际挂载路径和素材SHA256；配套工作流中的模型名也须匹配。示例不含模型权重或私人素材。
 
