@@ -7,6 +7,8 @@ description: 在 Kaggle 官方免费额度内部署并运行 ComfyUI API 工作�
 
 把用户的 ComfyUI API 工作流变成可追踪的 Kaggle 私有批处理任务。先查额度、验证输入，再提交一次；技术成功不等于画面验收通过。
 
+给仓库使用者的中文首页与快速开始见 [README.md](README.md)；Agent 执行任务仍以本文件的操作规则为准。
+
 ## 开始前
 
 1. 使用 `astrbot_execute_shell` 或当前环境的等效终端执行本目录下的脚本。Python 3.11+；本地校验仅用标准库。联机操作需要官方 `kaggle==2.2.4` CLI/SDK，已有新版本须先核验兼容性，不静默升级。

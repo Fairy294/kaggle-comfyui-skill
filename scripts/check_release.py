@@ -9,6 +9,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 TOP = {
+    "README.md",
     "SKILL.md",
     "LICENSE",
     ".gitignore",
