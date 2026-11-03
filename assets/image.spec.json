@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "owner": "your-kaggle-user",
+  "accelerator": "NvidiaTeslaT4",
+  "timeout_seconds": 1800,
+  "comfy": {
+    "repo": "https://github.com/Comfy-Org/ComfyUI",
+    "revision": "0b05cd8a3683cbf0c291b1472bb8b64da41de9ae"
+  },
+  "datasets": [
+    "your-kaggle-user/private-models"
+  ],
+  "parent_kernels": [],
+  "models": [
+    {
+      "source": "/kaggle/input/private-models/your-checkpoint.safetensors",
+      "target": "checkpoints/your-checkpoint.safetensors",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "inputs": [],
+  "custom_nodes": [],
+  "pip_packages": [],
+  "extra_comfy_args": [
+    "--fp32-vae"
+  ]
+}

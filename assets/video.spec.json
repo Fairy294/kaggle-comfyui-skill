@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "owner": "your-kaggle-user",
+  "accelerator": "NvidiaTeslaT4",
+  "timeout_seconds": 3600,
+  "comfy": {
+    "repo": "https://github.com/Comfy-Org/ComfyUI",
+    "revision": "0b05cd8a3683cbf0c291b1472bb8b64da41de9ae"
+  },
+  "datasets": [
+    "your-kaggle-user/private-models"
+  ],
+  "parent_kernels": [],
+  "models": [
+    {
+      "source": "/kaggle/input/private-models/wan2.1_t2v_1.3B_fp16.safetensors",
+      "target": "diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "source": "/kaggle/input/private-models/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "target": "text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "source": "/kaggle/input/private-models/wan_2.1_vae.safetensors",
+      "target": "vae/wan_2.1_vae.safetensors",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "inputs": [],
+  "custom_nodes": [],
+  "pip_packages": [],
+  "extra_comfy_args": [
+    "--fp32-vae"
+  ]
+}
