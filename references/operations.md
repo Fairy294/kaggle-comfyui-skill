@@ -5,7 +5,7 @@
 README 的简短复制指令包含完整安装配置流程，由 Agent 执行：
 
 1. 定位当前 Agent 实际加载的 skills 目录，从用户指定的仓库安装；已有安装先核对并复用，保留本地修改。
-2. 在本地虚拟环境安装 `requirements.txt` 中的依赖，并运行 `python -m pip check`。
+2. 使用 Python 3.11+ 自带的 `venv`；安装目录已有兼容的 `.venv` 时复用，否则运行 `python -m venv .venv` 创建。通过该环境的解释器安装 `requirements.txt` 中的依赖，并运行 `python -m pip check`。
 3. 用户已提供 API Token 时，通过 `configure --token-stdin` 持久化保存；未提供时先复用本机 JSON。Token 不回显，不拼入 shell 命令或命令参数。
 4. 使用同一 Python 解释器运行 `quota`，向用户报告实际安装位置、配置状态和真实剩余额度。缺少 Token 且本机没有可用配置，或遇到无法自行解决的错误时，再说明具体缺项。
 
@@ -13,7 +13,9 @@ README 的简短复制指令包含完整安装配置流程，由 Agent 执行：
 
 ## 环境与认证
 
-本地支持 Windows、Linux 和 macOS，需要 Python 3.11+。离线 `validate`、`prepare` 和 `configure` 仅用标准库；联机操作在虚拟环境运行 `python -m pip install -r requirements.txt`，安装官方 `kaggle==2.2.4` CLI/SDK 与 `six==1.17.0`，随后运行 `python -m pip check`。`kaggle==2.2.4` 实际导入 `six`，但未声明该依赖，不能依赖其他包间接安装它。子进程也使用同一解释器，无需另行配置 `kaggle` 可执行文件路径。提交锁在 Windows 使用 `msvcrt`，在 Linux/macOS 使用 `fcntl`。
+本地支持 Windows、Linux 和 macOS，使用 Python 3.11+ 标准库 `venv` 创建或复用安装目录中的 `.venv`。下文的 `python` 均指该环境的解释器：Linux/macOS 为 `.venv/bin/python`，Windows 为 `.venv\Scripts\python.exe`。Agent 优先直接调用其完整路径，无需依赖 shell 激活状态。
+
+离线 `validate`、`prepare` 和 `configure` 仅用标准库；联机操作在该环境中运行 `python -m pip install -r requirements.txt`，安装官方 `kaggle==2.2.4` CLI/SDK 与 `six==1.17.0`，随后运行 `python -m pip check`。`kaggle==2.2.4` 实际导入 `six`，但未声明该依赖，不能依赖其他包间接安装它。后续命令和子进程均使用同一解释器，无需另行配置 `kaggle` 可执行文件路径。提交锁在 Windows 使用 `msvcrt`，在 Linux/macOS 使用 `fcntl`。
 
 API Token 由用户通过 [Kaggle 官方设置](https://www.kaggle.com/settings/api) 的 API Tokens 创建。用户选择手动命令行配置时运行：
 

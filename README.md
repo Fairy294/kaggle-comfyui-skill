@@ -29,7 +29,7 @@
 请从 https://github.com/riyuexingchennnn/kaggle-comfyui-skill.git 安装这个 skill。我的 Kaggle API Token 是 YOUR_KAGGLE_API_TOKEN，请自动保存配置并验证剩余额度。
 ```
 
-也可以通过命令行安装配置：
+也可以通过命令行安装配置，使用 Python 3.11+ 自带的 `venv` 创建虚拟环境：
 
 ```sh
 git clone https://github.com/riyuexingchennnn/kaggle-comfyui-skill.git
@@ -37,7 +37,7 @@ cd kaggle-comfyui-skill
 python -m venv .venv
 ```
 
-激活虚拟环境：Linux/macOS 运行 `source .venv/bin/activate`；Windows PowerShell 运行 `.\.venv\Scripts\Activate.ps1`，CMD 运行 `.venv\Scripts\activate.bat`。无需激活也可直接用 `.venv/bin/python` 或 `.\.venv\Scripts\python.exe` 替代下文的 `python`。
+激活虚拟环境：Linux/macOS 运行 `source .venv/bin/activate`；Windows PowerShell 运行 `.\.venv\Scripts\Activate.ps1`，CMD 运行 `.venv\Scripts\activate.bat`。也可以直接使用 `.venv/bin/python` 或 `.\.venv\Scripts\python.exe` 替代下文的 `python`，无需激活。安装依赖和后续命令均使用该环境的解释器。
 
 ```sh
 python -m pip install -r requirements.txt
