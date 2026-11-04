@@ -1,39 +1,36 @@
-# 图像和视频工作流
+# 准备图像和视频工作流
 
-## API 格式
+## 导出与检查 API 图
 
-使用 ComfyUI 的“保存/API 导出”（不同版本名称略异）：根对象是节点ID到 `{class_type, inputs}` 的映射；`["节点ID", 输出索引]` 表示连线。不把UI格式的 `nodes/links/widgets_values` 当成可运行API图。
+从 ComfyUI 导出 API 格式：根对象为节点 ID 到 `{class_type, inputs}` 的映射，`["节点ID", 输出索引]` 表示连线。界面使用的 `nodes/links/widgets_values` JSON 需要先在 ComfyUI 中导出为 API 图。
 
-本地校验拒绝缺失连线、负输出索引、环、明显路径穿越。云端启动后对照 `/object_info` 检查已安装节点与必填字段，再由 `/prompt` 完成值/类型/枚举校验。新节点 schema 可能有动态组合键，别在工具中擅自删字段；对照实际schema更新工作流。
+本地校验检查连线、输出索引、循环和路径。云端启动后，runner 对照 `/object_info` 检查已安装节点与必填输入，再由 `/prompt` 校验值、类型和枚举。节点版本改变时根据实际 schema 更新 API 图，保留动态组合输入，例如 SaveVideo 的 `format.codec`。
 
-## 图像示例
+## 按任务配置
 
-`assets/image.workflow.json` 是 SD兼容整合检查点的512×512文生图结构：CheckpointLoaderSimple、CLIPTextEncode、EmptyLatentImage、KSampler、VAEDecode、SaveImage。先替换 ckpt_name 与 model spec（数据集路径、models/checkpoints目标和实际SHA256）。20步/CFG7只是示例，不适用于所有模型。输出被SaveImage持久化，否则不算可下载成果。
+1. 选择适合目标模型的加载节点、编码器和 VAE，确认工作流中的文件名与 `models[].target` 一致。代码版本、文件校验值和挂载路径按 [运行配置](operations.md) 填写。
+2. 按用户目标设置提示词、分辨率、采样参数、视频帧数和帧率。配套示例的参数只适用于对应示例。
+3. 将图片、视频、音轨和前置帧通过 `inputs` 放入 ComfyUI `input/`，核对节点实际使用的文件名。
+4. 连接 SaveImage、SaveVideo 或相应插件的保存节点，将成果持久化到受管输出目录。当前 runner 只收集 history 中 `type=output` 的文件，单独使用临时预览节点不足以交付。
+5. 先执行离线校验；需要 GPU 验证时，在用户授权的额度和时限内运行小任务，按真实日志区分安装、排队、采样和解码。
 
-## 视频示例
+参考素材中的黑边、叠化、双主体、文字和运动模糊可能被生成结果继承。按任务需要先处理输入，视频与音轨使用相同的裁切范围；修复手法及质量变化应在交付时说明。
 
-`assets/video.workflow.json` 是 Wan2.1小型文生视频结构示例，单段17帧、480×320、16FPS，用UNETLoader、CLIPLoader(type=wan)、VAELoader、EmptyHunyuanLatentVideo、ModelSamplingSD3、KSampler、VAEDecode、CreateVideo、SaveVideo。填入合法Wan模型、text_encoder、VAE，并保证 names 与模型目标目录完全一致。
+## 配套示例
 
-SaveVideo 在固定版本使用动态组合输入：format=auto，format.codec=auto。若目标版本不同，先确认该节点的 `/object_info`，不要把新旧schemas混用。模板是结构示例，未在本次GPU上执行，不能承诺画质或显存适配。ComfyUI自动使用单进程选中的GPU；并不会因Kaggle给两张T4就自动获得30GB合并显存。
+| 示例 | 工作流与配置 | 使用说明 |
+| --- | --- | --- |
+| SD 兼容检查点文生图 | [工作流](../assets/image.workflow.json) · [配置](../assets/image.spec.json) | 替换检查点名称、挂载路径和占位校验值 |
+| Wan 文生视频 | [工作流](../assets/video.workflow.json) · [配置](../assets/video.spec.json) | 分别配置扩散模型、文本编码器和 VAE，核对目标节点 schema |
+| Anima Turbo | [工作流](../assets/anima-turbo.workflow.json) · [配置](../assets/anima-turbo.spec.json) | 基于 Chaika 示例，组件和许可见 [Anima Turbo 说明](anima-turbo.md) |
+| H3 角色替换与首帧引导 | [工作流](../assets/h3-character-swap.workflow.json) · [配置](../assets/h3-character-swap.spec.json) | 需要专用双卡 profile，见 [H3 说明](h3-workflow.md) |
 
-## Anima Turbo v1.1
+使用自定义工作流时保留相同的输入、输出和校验契约，按实际模型准备节点与配置。多张 GPU 的显存不会因平台分配而自动合并；多卡执行需要模型和插件支持。
 
-`assets/anima-turbo.workflow.json` 与同名前缀 spec：以 Civitai 嘉依卡示例图140742450为准，分离UNET/Qwen3_0.6B/QwenImageVAE，CLIPtype=stable_diffusion/device=default，ResolutionSelector(3:4,1.2MP,16) → EmptyLatentImage，实际976×1296、8步、CFG1、Euler/simple、种子758641017238633。批处理版仅将PreviewImage改为SaveImage；未改作者API/UI及来源另存为anima-chaika-original.api.json、anima-chaika-original.ui.json、anima-chaika-source.json。ResolutionSelector是固定ComfyUI的内置节点，不安装同名第三方插件。不是SDXL检查点；非商业许可，见Anima专用说明。
+## 多段视频与首尾帧
 
-## H3 专项迁移
+当前工具不自动切片或改写首帧节点。需要接力时，先确定每段真正交付的帧范围，再把上一段最后一张交付帧的无损 PNG 作为下一段输入。可以通过私有 Dataset 或 `parent_kernels` 挂载，核对真实路径并填写 `inputs` 校验值。
 
-`assets/h3-character-swap.workflow.json` 与spec：角色/服装/动作/原音轨 +真实frame0引导，固定双T4SP+GGUF，8步联合音视频，保存全部原生PNG。必须显式H3profile，兼容补丁与模型/输入要求详见H3专用说明。新runner迁移版未GPU复测，不宣称原专项运行与新版本等价。
+在 API 图中将该帧连接到模型的 I2V、keyframe 或首帧控制节点，同时保留任务所需的身份、动作和音轨参考。只在提示词提及上一段画面不能建立帧级约束。
 
-## 用户自定义工作流
-
-1. 固定ComfyUI与所有插件提交、模型文件hash、模型许可。
-2. 明确各LoadImage/LoadVideo的input目录与前置帧/音轨路径。
-3. 确认SaveImage/SaveVideo/对应插件持久化到受管 output 目录。
-4. 先跑小规格或CPU层面校验；大额GPU运行需要单独授权和真实余量，不自动降质量假装交付。
-5. 从日志证明实际进入采样与解码；可用task_id、prompt_id追踪，不把排队心跳当百分比。
-
-## 分段首尾帧
-
-此版本不自动改写任意图中的首帧节点；内置H3图已经连接MiniMaxH3AddGuide(frame0)，但仍需选择正确的实际尾帧输入。由Agent按模型接口把上一段真正交付的最后一张无损原生PNG挂载为下一段输入，parent_kernels引用准确前置任务，inputs记录该PNG的SHA256；再在自己的API图连接真实I2V/keyframe控制，不只是放进prompt。
-
-例如第一段native0..119交付，第二段native0是重复边界、交付native1..120，则下一段应继承第二段native120，不是119、更不是采样器多出的123。末尾模型网格padding需排除，不让动作/音轨错位。实际输出会重绘：首帧引导不保证像素一致；比较生成首帧和尾帧的姿势、构图与速度后才能拼接。不要叠化或光流掩盖接缝、模糊或重复动作。
+下一段若包含重复边界帧，拼接时仅保留一次；模型为计算补齐的末尾帧应按交付范围裁去。帧率、帧数和音轨时长一起核对，接力继续使用裁切后真正交付的尾帧。首帧引导仍可能产生重绘，接缝的姿态、构图、身份和运动速度按 [验收流程](quality-and-recovery.md) 检查。

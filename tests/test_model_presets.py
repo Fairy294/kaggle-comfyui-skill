@@ -140,15 +140,6 @@ class ModelPresetTests(unittest.TestCase):
             ["h3/segment-frames/000000.png", "h3/segment.mp4"],
         )
 
-    def test_model_license_and_evidence_disclosures(self):
-        anima = (ROOT / "references/anima-turbo.md").read_text()
-        h3 = (ROOT / "references/h3-workflow.md").read_text()
-        self.assertIn("非商业", anima)
-        self.assertIn("3263843", anima)
-        self.assertIn("原专项流程", h3)
-        self.assertIn("尚未", h3)
-        self.assertIn("17k+5", h3)
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,45 +2,45 @@
 
 ## 何时使用
 
-重复运行同一模型时，优先将已获许可、哈希核验通过的权重保存到本人私有 Kaggle Dataset；生图任务通过 `spec.datasets` 挂载，`models[].source` 指向真实只读挂载文件，再由 runner 校验 SHA256 并链接到 ComfyUI。它避免每次从 Hugging Face 重新拉取，不保证平台内部挂载时间为零。
+重复使用同一组权重时，可将获准使用的文件保存为本人私有 Kaggle Dataset，之后通过 `spec.datasets` 挂载。runner 按 `models[].source` 读取真实挂载文件，核对 SHA256 后链接到 ComfyUI 模型目录。
 
-本功能是操作流程，不是新增通用下载器：当前 `kaggle_comfy.py` 只消费已挂载文件，不负责创建、上传数据集，也不会自动把临时缓存持久化。专项 inline-download runner 可作无缓存时的回退；不要把它冒称通用runner能力。
+当前命令行工具只消费挂载文件。创建、上传或更新数据集由 Agent 在用户授权范围内通过官方 CLI/SDK 执行；检查现有缓存可用后再决定是否上传。
 
-## 一次性建立缓存
+## 建立缓存
 
-1. 先查本人已有数据集、存储空间和许可。用户只问“能否”时只解释；明确要求安排后才上传合法模型。默认私有，禁止加 `--public`；不上传图片、工作目录、凭证或无关文件。上次任务在 `/kaggle/temp` 的下载随容器结束可能丢失，不能把历史下载成功说成现在仍有缓存。
-2. 专用 staging 目录放在 Skill/Git 外。固定模型上游 revision，逐文件下载并核验 SHA256、字节数；失败的 `.part` 文件不得上传。模型名用原名且可平铺，便于核验，但实际挂载位置必须实测。
-3. 保留原许可证、各组件来源和 NOTICE；Anima 还受 CircleStone 非商业及相关派生条款约束，参考 `anima-turbo.md` 的公开来源。不把模型改标 MIT、CC0 或 CC-BY。Kaggle metadata 的 `licenses` 可选 `other`，它仅为平台类别，不替代随包许可证。
-4. 目录内建立 `dataset-metadata.json`，例如：
+1. 确认模型来源、版本、许可和所需空间，检查本人已有私有数据集。临时容器下载目录不作为持久缓存。
+2. 在 Skill/Git 外建立独立 staging 目录。按确定的上游版本准备文件，逐项核对预期 SHA256 和大小；剔除未完成的下载文件及无关素材、日志和凭证。
+3. 保留各组件的许可证、来源和 NOTICE。平台的许可分类不能替代模型本身的条款。
+4. 在 staging 目录建立 `dataset-metadata.json`，名称按本次模型集合填写，例如：
 
 ```json
 {
-  "id": "your-kaggle-user/anima-turbo-v11-model-cache",
-  "title": "Anima Turbo v1.1 Private Model Cache",
+  "id": "your-kaggle-user/private-model-cache",
+  "title": "Private Model Cache",
   "licenses": [{"name": "other"}]
 }
 ```
 
-5. 用已鉴权的固定版本官方 CLI 执行一次：
+5. 使用已配置环境变量认证的官方 CLI 创建私有数据集，并查询状态与文件：
 
 ```sh
 kaggle datasets create -p /absolute/staging/models --keep-tabular
-kaggle datasets status your-kaggle-user/anima-turbo-v11-model-cache --format json
-kaggle datasets files your-kaggle-user/anima-turbo-v11-model-cache --format json
+kaggle datasets status your-kaggle-user/private-model-cache --format json
+kaggle datasets files your-kaggle-user/private-model-cache --format json
 ```
 
-`create` 默认私有，SDK对应 `public=False`。先留任务标识和提交标记；超时/未知返回先查该唯一 slug，禁止重放创建或误加新版本。日志不要打印签名URL或令牌。授权使用已有CLI默认分块/断点机制不等于允许盲目重放整次创建。
+`create` 默认私有，SDK 使用 `public=False`。记录数据集引用及创建结果；超时或响应未知时先核对该引用，避免重复创建或意外新增版本。日志中隐藏令牌和签名 URL。
 
-## 必须核验后才供GPU任务复用
+## 核验与复用
 
-- `READY`/成功状态 + 文件清单大小 + 平台私有属性分别核验；仅收到上传URL不等于已就绪。
-- 使用无加速器、无外网的 CPU-only notebook 挂载该私有 Dataset，扫描 `/kaggle/input` 中真实路径并按三份预期 SHA256 校验。该验证不消耗GPU，但仍是云端执行；需要用户授权、硬超时、单次提交与巡检。禁止靠猜测 slug 到目录名的映射填写 spec。
-- 将真实 `models[].source`、数据集引用及验证证据保存到运行目录；公共 Skill 中只放占位配置，不写用户账号、私有路径和任务日志。
-- 成功后默认复用这个 Dataset；模型版本变化时先核对上游版本/hash，再显式建新版本。缓存失效/挂载失败先读取诊断，不静默消耗一轮GPU重新拉模型。
-- 权重数据集和验证代码分开，输出不再复制权重；清理本机副本前确认远端状态与可用性，未经授权不删除数据集。
+- 分别确认处理成功、平台私有属性、文件清单和大小；上传请求被接受不代表文件已可挂载。
+- 首次复用前核实 `/kaggle/input` 的真实文件位置，并按配置逐文件校验。可在授权范围内使用有硬超时的 CPU-only notebook 检查，无需启动 GPU；挂载路径不能由数据集 slug 推测。
+- 将数据集引用、实际 `models[].source`、预期 SHA256 和验证结果保存在独立任务目录，再用于 GPU 任务。
+- 后续任务优先复用已核实的缓存。更换模型版本、精度或格式后重新确认文件，明确更新数据集版本和运行配置。
+- 缓存不可用时先查看诊断，重新下载或上传须在用户授权范围内进行。清理本地副本前确认远端文件可用；删除数据集另行确认。
 
-## 来源与验证范围
+## 使用边界
 
-- 官方 CLI dataset metadata：https://github.com/Kaggle/kaggle-cli/blob/main/docs/datasets_metadata.md
-- 官方 SDK：`KaggleApi.dataset_create_new(..., public=False)`；固定依赖 `kaggle==2.2.4`，已读源码核验默认私有及metadata字段。
-- 当前通用runner通过 `spec.datasets`/`models` 使用挂载输入，来源：`scripts/kaggle_comfy.py`、`scripts/kernel_runtime.py`。本说明不代表任意账号数据集已建立或完成GPU复测。
+Dataset 用于持久保存模型；`parent_kernels` 用于引用前置任务输出。两者的实际挂载路径都需要检查。生图任务通过挂载和链接使用权重，无需将整份权重复制到输出目录。
+
+数据集 metadata 格式见 [官方 CLI 说明](https://github.com/Kaggle/kaggle-cli/blob/main/docs/datasets_metadata.md)。运行配置与文件校验契约见 [操作说明](operations.md)。

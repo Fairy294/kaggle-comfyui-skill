@@ -1,58 +1,67 @@
 # 配置和运行契约
 
-## 环境
+## 环境与认证
 
-本地 Python 3.11+。离线 validate/prepare 仅用标准库；远程调用需要 `kaggle==2.2.4`，建议在用户已有虚拟环境中执行 `python -m pip install kaggle==2.2.4`，不要修改系统环境或自动替换现有版本。宿主需支持 POSIX flock（Linux/macOS）。官方CLI与SDK使用同一解释器：安装好后检查 `python -m pip show kaggle` 和 `kaggle -W quota --format json`。
+本地需要 Python 3.11+ 和支持 POSIX flock 的 Linux/macOS 环境。离线 `validate`、`prepare` 仅用标准库；联机操作使用官方 `kaggle==2.2.4` CLI/SDK。建议在虚拟环境安装依赖，使用同一解释器检查 `python -m pip show kaggle`。
 
-所有 Kaggle CLI/SDK 联机操作（配额查询、任务提交、状态轮询、日志流、产物拉取等）均需通过 API Key 进行身份认证。支持两种认证方式：
-- 方式 A（推荐）：设置环境变量 `KAGGLE_API_TOKEN`，值为用户 Kaggle API Key。
-- 方式 B：配置本地凭证文件 `~/.kaggle/kaggle.json`，写入 `{"username":"<USERNAME>","key":"<API_KEY>"}` 并限制权限为 `chmod 600 ~/.kaggle/kaggle.json`。
+所有 Kaggle CLI/SDK 联机操作都使用环境变量配置 API Key：
 
-不运行登录脚本、不扫描用户密码、不把 `~/.kaggle` 拷贝到仓库。用户通过 Kaggle 官方设置创建/配置令牌；CLI因认证失败停止时让用户在本机安全配置，不索取聊天密码或验证码。
+```sh
+export KAGGLE_API_TOKEN="YOUR_KAGGLE_API_KEY"
+python scripts/kaggle_comfy.py quota
+```
 
-## spec 字段
+API Key 由用户通过 Kaggle 官方设置创建并在本机配置。不运行登录脚本，不将 API Key 写入仓库或日志；认证失败时检查本机环境变量。
 
-下表原有字段均必填，未用数组写 `[]`；新增可选 `runtime_profile`，缺省为 `standard`。只有 `minimax-h3-t4-v1` 会启用固定双T4专用兼容配置，详见H3工作流说明：
+## 运行配置
 
-|字段|约束|
-|---|---|
-|version|1|
-|owner|本人 Kaggle username，无额外 URL 或密码|
-|accelerator|NvidiaTeslaT4 或 NvidiaTeslaP100；不代表GPU可用性保证|
-|timeout_seconds|300..43200；须满足平台实际上限及剩余额度减安全余量|
-|comfy|`repo` 为纯 HTTPS GitHub 仓库 URL，`revision` 为40字符提交|
-|datasets|`owner/private-dataset` 数组；先在 Kaggle 创建合法私有数据集|
-|parent_kernels|`owner/kernel-slug` 数组；用于挂载此前任务输出|
-|models|source/target/sha256；source 必须是实际 `/kaggle/input/...` 文件，target 是 ComfyUI `models/` 下相对路径|
-|inputs|同上；target 是 ComfyUI `input/` 下相对路径|
-|custom_nodes|纯 GitHub repo/revision 数组；会安装该提交的 requirements，属于受信任代码边界|
-|pip_packages|可选精确 `package==version` 字符串数组，不接收选项/URL/任意shell|
-|runtime_profile|可选：standard 或 minimax-h3-t4-v1；后者强制固定版本、两插件、T4与H3专用启动标志|
-|extra_comfy_args|普通 profile 有限白名单：lowvram/normalvram/cpu-vae/fp32-vae/fp16-vae/use-pytorch-cross-attention/disable-smart-memory/disable-pinned-memory（均带--）|
+除可选的 `runtime_profile` 外，下列字段均须提供；未使用的数组写 `[]`。字段校验以 [scripts/common.py](../scripts/common.py) 为准。
 
-挂载路径要先在 Kaggle Input 面板或 CPU-only notebook 确认，工具不会猜数据集 slug 与文件系统目录关系。哈希可用 `sha256sum file` 计算。零哈希示例不是真实模型 hash。
+| 字段 | 约束 |
+| --- | --- |
+| `version` | 当前为 1 |
+| `owner` | 本人 Kaggle 用户名 |
+| `accelerator` | `NvidiaTeslaT4` 或 `NvidiaTeslaP100`；实际可用性由平台决定 |
+| `timeout_seconds` | 300..43200；还须满足平台限制和实时剩余额度 |
+| `comfy` | HTTPS GitHub `repo` 与完整的 40 字符 `revision` |
+| `datasets` | `owner/dataset-slug` 数组，用于挂载模型和素材 |
+| `parent_kernels` | `owner/kernel-slug` 数组，用于挂载前置任务输出 |
+| `models` | 每项为 `source`、`target`、`sha256`；目标相对 ComfyUI `models/` |
+| `inputs` | 每项同上；目标相对 ComfyUI `input/` |
+| `custom_nodes` | 插件的 GitHub `repo` 与固定 `revision` 数组 |
+| `pip_packages` | 精确的 `package==version` 数组，不接收选项、URL 或 shell 命令 |
+| `extra_comfy_args` | 受脚本白名单限制，监听地址、端口和输出目录由工具管理 |
+| `runtime_profile` | 缺省为 `standard`；H3 使用专用配置，见 [H3 工作流](h3-workflow.md) |
 
-### 模型缓存与挂载
+`models` 和 `inputs` 的 `source` 必须是实际 `/kaggle/input/...` 文件；`target` 必须是无路径穿越、无重叠的相对路径。先通过 Kaggle Input 面板或挂载检查确认真实路径，再填写配置。
 
-重复使用的权重优先保存为本人私有 Dataset，流程见 `references/model-cache.md`（从Skill入口直接读取）。将实际数据集引用填入 `datasets`；`models[].source` 必须来自 Input面板或CPU-only核验的真实路径。禁止把slug到目录的猜测写作平台保证。
+## 版本与文件校验
 
-`parent_kernels` 是此前输出的可选来源，不等于持久模型Dataset。上游目录层级和实际挂载形式均需扫描核实；不能用“只能平铺、子目录绝对不能挂载”概括此前某次层级错配。未核验跨Kernel路径时使用已验证Dataset；都不可用时才考虑单独授权的内核直下载。
+本次运行的 `.spec.json` 保存执行所需的代码版本、文件路径和预期 SHA256。[模型来源清单](../assets/model-sources.json) 提供配套示例的公开来源信息；更换模型或代码版本时，重新确认来源、许可和兼容性，并更新运行配置。
 
-## 私有批处理生命周期
+模型的预期校验值应来自发布方或已确认的文件版本；用户素材在确定内容后本地计算，例如 `sha256sum FILE`。文件更名不需要修改校验值，权重转换、量化或内容变更后需要重新确认。示例中的全零哈希是占位值，运行前须替换；`validate` 通过仅说明结构合法。
 
-- validate、prepare：本地，无写云端或GPU。
-- submit：显式确认后，先查实时 quota，再持久化任务身份，然后调用官方 ApiSaveKernelRequest。强制私有，设置官方 machine_shape、session_timeout_seconds 与 SAVE_AND_RUN_ALL。只发一次请求。每次 prepare 创建新 UUID；不要连续 prepare+submit 来“重试”。
-- status：远端任务状态不是画质通过证据。会话 COMPLETE 需再下载 result。
-- logs：最多60秒，默认20秒；脱敏保存最后200KB。不是无限堵塞。
-- download：终态才拉取，支持官方分页，最多100页/5000文件/30GiB，单文件最多10GiB。仅下载本任务 task-UUID 前缀，拒绝越界路径与外部下载主机；不输出签名URL。
-- verify：已下载数据的离线重新核验。下载中断后若目录已存在文件，不自动覆盖；先保留目录并核查，移到旁边另存后再下载。当前无断点续传。
+任务身份、实际工作流、文件清单、日志和输出校验值保存在独立任务目录。重复使用的模型可按 [缓存流程](model-cache.md) 保存为本人私有 Dataset。`parent_kernels` 提供前置任务输出，复用前同样需要确认实际挂载路径和文件完整性。
 
-任务结束后先发送产物，再清除宿主巡检。删除巡检不是停止GPU。取消使用 Kaggle Active sessions 的 Stop Session；未确认远端终态前不能说“已停服”。没有会话ID时不猜，不用删除Notebook/创建新session绕过。
+## 命令与生命周期
 
-## 安全和供应链
+| 命令 | 行为与边界 |
+| --- | --- |
+| `validate` | 本地检查配置与 API 图，不确认模型文件存在或节点已安装 |
+| `prepare` | 本地创建任务目录和唯一 UUID，不写入云端、不使用 GPU |
+| `submit` | 在用户授权后带 `--confirm-remote-execution` 执行；先查实时额度，再持久化提交标记并发出一次私有任务请求 |
+| `status` | 查询平台状态；平台 `COMPLETE` 后仍须下载并检查任务结果 |
+| `logs` | 有界读取，默认 20 秒、最多 60 秒；脱敏保存最后 200KB |
+| `download` | 远端终态后下载本任务目录；最多 100 页、5000 文件、总计 30GiB，单文件最多 10GiB |
+| `verify` | 离线重查已下载文件的任务身份、输入来源、工作流与输出清单 |
 
-- 私有 notebook 和输出仍会上传至 Kaggle，不适用于不能上云的数据。
-- ComfyUI/custom_nodes 是第三方任意代码边界，固定提交、审核来源再运行；不要在其环境配置其他业务凭证。工具会过滤常见凭证环境变量，但这不是沙箱，也不能阻止恶意代码主动访问云平台身份。
-- 上游 ComfyUI requirements 可能含范围依赖。固定 Git commit 不是完整依赖锁，首次运行记录 bootstrap.log 并按实际 torch/CUDA排错。不要盲目安装浮动 fork、远程shell脚本或关闭验证。
-- 新 runner 的脚本是本项目原创，不捆绑原私有素材、任何模型权重、H3修改后的第三方完整文件或聊天记录；H3 profile 仅随附本项目原创兼容补丁代码，运行时对用户授权的固定上游checkout应用。Kaggle/ComfyUI/模型的各自条款仍适用。
-- 额度按当前账号官方返回，无“无限GPU”、账号池、刷时长或账户切换。TPU不等于CUDA；任务能否排队、网络、空间、GPU类型受平台影响。
+提交要求剩余 GPU 额度覆盖“最大会话时长 +5 分钟余量”。提交超时或返回未知时，保留 `submission.json`，按唯一任务引用核对远端状态；不要删除标记或重新 `prepare` 绕过单次提交限制。
+
+下载中断后保留已有文件并核查，工具不自动覆盖或断点续传。恢复步骤见 [验收与排错](quality-and-recovery.md)。取消任务使用 Kaggle 对应会话的 Stop Session；关闭宿主巡检后仍须确认云端会话已停止。
+
+## 执行边界
+
+- 私有 notebook、素材与输出仍会上传 Kaggle，运行前确认数据允许上云。
+- ComfyUI 和自定义节点会执行第三方代码；检查来源与依赖，避免在运行环境放置无关凭证。环境变量过滤不能代替隔离。
+- 固定 Git 提交不会自动锁定所有传递依赖；环境变化时结合安装日志核对 torch、CUDA 和插件兼容性。
+- 当前工具消费已挂载文件，不负责下载权重或创建模型数据集。额度、机器规格和网络条件以当前账号与平台为准。

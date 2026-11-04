@@ -5,11 +5,11 @@
         "8",
         0
       ],
-      "filename_prefix": "anima/chaika"
+      "filename_prefix": "anima-turbo"
     },
     "class_type": "SaveImage",
     "_meta": {
-      "title": "Save Image (batch persistence only)"
+      "title": "Save Image"
     }
   },
   "8": {

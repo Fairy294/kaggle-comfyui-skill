@@ -44,7 +44,8 @@ def public_files():
         ["git", "-C", str(ROOT), "ls-files", "-z"], capture_output=True, timeout=10
     )
     if result.returncode == 0 and result.stdout:
-        return [ROOT / name.decode() for name in result.stdout.split(b"\0") if name]
+        paths = [ROOT / name.decode() for name in result.stdout.split(b"\0") if name]
+        return [path for path in paths if path.exists() or path.is_symlink()]
     return [
         p
         for p in ROOT.rglob("*")
