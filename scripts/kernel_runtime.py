@@ -85,7 +85,7 @@ def clean_environment():
         for key, value in os.environ.items()
         if not any(
             word in key.upper()
-            for word in ["TOKEN", "PASSWORD", "SECRET", "API_KEY", "CREDENTIAL"]
+            for word in ["TOKEN", "PASSWORD", "SECRET", "KEY", "CREDENTIAL"]
         )
         and not key.upper().startswith(("KAGGLE_", "AWS_", "AZURE_"))
     }

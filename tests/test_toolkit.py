@@ -239,7 +239,12 @@ class JobSafetyTests(unittest.TestCase):
             root.mkdir()
             with self.assertRaises(ValueError):
                 kaggle_comfy.download_target(root, "../outside")
-            (root / "link").symlink_to(Path(directory), target_is_directory=True)
+            try:
+                (root / "link").symlink_to(Path(directory), target_is_directory=True)
+            except OSError as error:
+                if getattr(error, "winerror", None) == 1314:
+                    self.skipTest("Windows account lacks the symbolic-link privilege")
+                raise
             with self.assertRaises(ValueError):
                 kaggle_comfy.download_target(root, "link/outside")
 

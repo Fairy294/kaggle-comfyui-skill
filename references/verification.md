@@ -13,7 +13,9 @@ python scripts/kaggle_comfy.py validate --spec assets/h3-character-swap.spec.jso
 python scripts/check_release.py
 ```
 
-测试默认不访问账号、网络或 GPU。覆盖配置与 API 图校验、预算判断、单次提交保护、模拟状态与下载、文件完整性、运行结果识别及专用 profile 的部分兼容边界。
+测试默认不访问真实账号、网络或 GPU；认证测试仅在临时目录使用虚构 API Token。覆盖 JSON 持久化、新进程自动读取、SDK/CLI/日志的 Token 加载与脱敏、离线准备不读取或上传 Token、跨进程提交锁，以及配置与 API 图校验、预算判断、单次提交保护、模拟状态与下载、文件完整性、运行结果识别及专用 profile 的部分兼容边界。
+
+CI 配置了 Windows、Linux、macOS 与 Python 3.11/3.12 的离线检查矩阵。Windows 账号没有符号链接权限时，仅跳过对应链接防护测试；其余测试仍执行。CI 配置本身不代表已经在这些平台运行通过，以实际检查结果为准。
 
 示例账号、数据集、挂载路径和全零校验值需要替换。`validate` 检查结构，不能确认模型已准备、许可适用或云端节点兼容。具体版本和预期文件校验值读取对应 spec 与 [模型来源清单](../assets/model-sources.json)。
 

@@ -21,15 +21,15 @@
 }
 ```
 
-5. 使用已配置环境变量认证的官方 CLI 创建私有数据集，并查询状态与文件：
+5. 使用本 Skill 的 CLI 入口自动加载本机 JSON 中的 API Token，调用官方 CLI 创建私有数据集，并查询状态与文件：
 
 ```sh
-kaggle datasets create -p /absolute/staging/models --keep-tabular
-kaggle datasets status your-kaggle-user/private-model-cache --format json
-kaggle datasets files your-kaggle-user/private-model-cache --format json
+python scripts/kaggle_comfy.py kaggle -- datasets create -p STAGING_DIR --keep-tabular
+python scripts/kaggle_comfy.py kaggle -- datasets status your-kaggle-user/private-model-cache --format json
+python scripts/kaggle_comfy.py kaggle -- datasets files your-kaggle-user/private-model-cache --format json
 ```
 
-`create` 默认私有，SDK 使用 `public=False`。记录数据集引用及创建结果；超时或响应未知时先核对该引用，避免重复创建或意外新增版本。日志中隐藏令牌和签名 URL。
+将 `STAGING_DIR` 替换为本机 staging 目录，路径含空格时加引号。认证配置见 [操作说明](operations.md)。`create` 默认私有，SDK 使用 `public=False`。记录数据集引用及创建结果；超时或响应未知时先核对该引用，避免重复创建或意外新增版本。日志中隐藏 API Token 和签名 URL。
 
 ## 核验与复用
 

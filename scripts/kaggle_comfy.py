@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Portable Kaggle ComfyUI batch CLI. Mutations require explicit confirmation."""
+"""Portable Kaggle ComfyUI batch CLI. GPU submission requires explicit confirmation."""
 
 from pathlib import Path
 from urllib.parse import urlsplit
 from contextlib import contextmanager
 import argparse
 import datetime
-import fcntl
 import json
 import os
 import subprocess
@@ -14,6 +13,7 @@ import sys
 import urllib.request
 import uuid
 
+from kaggle_auth import api_token_environment, configure, token_environment
 from common import (
     atomic_json,
     read_json,
@@ -33,16 +33,18 @@ def utcnow():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
-def quota(binary="kaggle"):
+def quota(binary=None):
     result = subprocess.run(
-        [binary, "-W", "quota", "--format", "json"],
+        ([binary] if binary else [sys.executable, "-m", "kaggle"])
+        + ["-W", "quota", "--format", "json"],
+        env=token_environment(),
         capture_output=True,
         text=True,
         timeout=45,
     )
     if result.returncode:
         raise RuntimeError(redact(result.stderr or result.stdout)[-1500:])
-    # CLI update warnings may precede the JSON array; never read credentials files.
+    # CLI update warnings may precede the JSON array.
     text = result.stdout
     for offset, char in enumerate(text):
         if char == "[":
@@ -63,14 +65,16 @@ def prepare(spec, workflow, root):
     job.mkdir(parents=True, exist_ok=False)
     slug = "comfy-" + task_id[:20]
     reference = spec["owner"] + "/" + slug
-    common_source = (HERE / "common.py").read_text()
-    runtime_source = (HERE / "kernel_runtime.py").read_text()
+    common_source = (HERE / "common.py").read_text(encoding="utf-8")
+    runtime_source = (HERE / "kernel_runtime.py").read_text(encoding="utf-8")
     profile_source = ""
     if spec.get("runtime_profile") == "minimax-h3-t4-v1":
         profile_source = (
             '_h3 = types.ModuleType("h3_compat")\n'
             'sys.modules["h3_compat"] = _h3\n'
-            "exec(" + repr((HERE / "h3_compat.py").read_text()) + ", _h3.__dict__)\n"
+            "exec("
+            + repr((HERE / "h3_compat.py").read_text(encoding="utf-8"))
+            + ", _h3.__dict__)\n"
         )
     source = (
         "# Generated standalone private ComfyUI batch job\n"
@@ -94,7 +98,7 @@ def prepare(spec, workflow, root):
         + "))\n"
     )
     compile(source, "kernel.py", "exec")
-    (job / "kernel.py").write_text(source)
+    (job / "kernel.py").write_text(source, encoding="utf-8")
     atomic_json(job / "spec.json", spec)
     atomic_json(job / "workflow.json", workflow)
     atomic_json(
@@ -129,15 +133,66 @@ def prepare(spec, workflow, root):
 
 
 def api_client():
-    try:
-        from kaggle.api.kaggle_api_extended import KaggleApi
-    except ImportError:
-        raise RuntimeError(
-            "Install optional pinned kaggle dependency in a local venv; do not copy credentials into the Skill"
-        ) from None
-    api = KaggleApi()
-    api.authenticate()
+    with api_token_environment():
+        try:
+            from kaggle.api.kaggle_api_extended import KaggleApi
+        except ImportError:
+            raise RuntimeError(
+                "Install optional pinned kaggle dependency in a local venv"
+            ) from None
+        try:
+            api = KaggleApi()
+            api.authenticate()
+        except SystemExit:
+            raise RuntimeError(
+                "Kaggle API Token authentication failed; check the JSON configuration"
+            ) from None
     return api
+
+
+def run_kaggle(arguments):
+    """Run the official CLI with the same persisted API Token and interpreter."""
+    if arguments[:1] == ["--"]:
+        arguments = arguments[1:]
+    if not arguments:
+        raise ValueError("Provide official Kaggle CLI arguments after kaggle --")
+    result = subprocess.run(
+        [sys.executable, "-m", "kaggle", *arguments],
+        env=token_environment(),
+        capture_output=True,
+        text=True,
+        timeout=900,
+    )
+    print(redact(result.stdout or ""), end="")
+    print(redact(result.stderr or ""), end="", file=sys.stderr)
+    return result.returncode
+
+
+@contextmanager
+def submission_lock(path):
+    """Nonblocking OS lock, released on close or process exit on all hosts."""
+    with Path(path).open("a+b") as lock:
+        if os.name == "nt":
+            import msvcrt
+
+            if lock.seek(0, os.SEEK_END) == 0:
+                lock.write(b"\0")
+                lock.flush()
+            lock.seek(0)
+            msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+            try:
+                yield
+            finally:
+                lock.seek(0)
+                msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            try:
+                yield
+            finally:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
 
 @contextmanager
@@ -216,8 +271,7 @@ def submit(job, confirmed=False, quota=None):
     if not confirmed:
         raise ValueError("Remote GPU execution requires --confirm-remote-execution")
     job = Path(job)
-    with (job / ".submit.lock").open("w") as lock:
-        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    with submission_lock(job / ".submit.lock"):
         if (job / "submission.json").exists():
             raise ValueError(
                 "Submission marker exists; reconcile unique remote reference, never blindly retry"
@@ -241,7 +295,9 @@ def submit(job, confirmed=False, quota=None):
         with (job / "submission.json").open("x") as handle:
             json.dump(state, handle, indent=2)
         try:
-            response = save_remote(spec, identity, (job / "kernel.py").read_text())
+            response = save_remote(
+                spec, identity, (job / "kernel.py").read_text(encoding="utf-8")
+            )
         except Exception as error:
             state.update(
                 state="SUBMISSION_UNKNOWN",
@@ -299,6 +355,7 @@ def logs(job, seconds=20):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        env=token_environment(),
     )
     try:
         stdout, _ = child.communicate(timeout=seconds)
@@ -306,7 +363,7 @@ def logs(job, seconds=20):
         child.kill()
         stdout, _ = child.communicate(timeout=10)
     stdout = redact(stdout or "")[-200000:]
-    (job / "latest-remote.log").write_text(stdout)
+    (job / "latest-remote.log").write_text(stdout, encoding="utf-8")
     # No inferred sampling percentage: only actual emitted facts.
     return stdout
 
@@ -479,6 +536,12 @@ def verify_download(job, collected=None):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    p = commands.add_parser("configure", help="Persist the local Kaggle API Token")
+    p.add_argument("--token-stdin", action="store_true")
+    p = commands.add_parser(
+        "kaggle", add_help=False, help="Official CLI using the saved API Token"
+    )
+    p.add_argument("arguments", nargs=argparse.REMAINDER)
     commands.add_parser("quota")
     p = commands.add_parser("validate")
     p.add_argument("--spec", required=True)
@@ -498,7 +561,11 @@ def main(argv=None):
     p.add_argument("--seconds", type=int, default=20)
     args = parser.parse_args(argv)
     try:
-        if args.command == "quota":
+        if args.command == "configure":
+            output = configure(args.token_stdin)
+        elif args.command == "kaggle":
+            return run_kaggle(args.arguments)
+        elif args.command == "quota":
             output = quota()
         elif args.command in {"validate", "prepare"}:
             config = validate_spec(read_json(args.spec))

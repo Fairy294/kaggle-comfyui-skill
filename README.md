@@ -2,29 +2,62 @@
 
 在 Kaggle 官方免费额度内跑 ComfyUI，生成图片或视频。支持查询额度、私有任务提交、状态查询、下载和文件校验；既可作为通用智能体技能（Agent Skill），也可独立使用命令行。
 
-## 上手
+## 效果演示
 
-需要 Python 3.11+、Linux/macOS，以及已通过官方方式配置认证的 Kaggle 账号。
+```
+[kaggle-comfyui-skill] 使用anima turbo工作流给我生成一张终末地佩丽卡海边骑自行车的图片，要求16:9
+```
+
+![](./doc/pelica.png)
+
+实测**4分05秒**完成任务，其中工作流从入队到完成约**30秒**；其余时间主要用于启动环境和安装ComfyUI。因此建议每次多生成几张图片。
+
+| anima turbo v1.1 工作流 | minimax h3 工作流 |
+| --- | --- |
+| <img src="./doc/Chaika.jpg" height="318" alt="Anima Turbo 示例"> | <img src="./doc/yeshunguang.gif" height="318" alt="MiniMax H3 示例"> |
+| 单张耗时约30秒 | 5秒耗时约8小时(右原图，UP梦忆ye) |
+
+## 快速上手
+
+支持 Windows、Linux 和 macOS，需要 Python 3.11+、Agent 客户端（如 Codex、AstrBot）和 Kaggle 账号；也可以独立使用命令行。
+
+> 注册好 Kaggle 账号后，需要在 setting 中完成 `Phone verification` 电话号码验证和 `Identity verification` 人脸认证，并在 `API Tokens` 生成一个 API Token
+
+将下面的 `YOUR_KAGGLE_API_TOKEN` 替换为你的 Kaggle API Token，再发给智能体，由它完成安装、配置和额度校验：
+
+```
+请帮我安装并配置 kaggle-comfyui-skill：通过 git clone https://github.com/riyuexingchennnn/kaggle-comfyui-skill.git 将技能安装到当前 Agent 的 skills 目录，安装依赖 kaggle==2.2.4。我的 Kaggle API Token 是 YOUR_KAGGLE_API_TOKEN，请直接通过 python scripts/kaggle_comfy.py configure --token-stdin 的标准输入将其持久化保存到本机用户目录的 .kaggle/kaggle-comfyui.json（已有配置则更新），不要回显 Token 或将其写入命令参数、日志和仓库。随后运行 python scripts/kaggle_comfy.py quota 校验额度，由你完成以上操作。
+```
+
+也可以通过命令行安装配置：
 
 ```sh
 git clone https://github.com/riyuexingchennnn/kaggle-comfyui-skill.git
 cd kaggle-comfyui-skill
-python3 -m venv .venv
-. .venv/bin/activate
+python -m venv .venv
+```
+
+激活虚拟环境：Linux/macOS 运行 `source .venv/bin/activate`；Windows PowerShell 运行 `.\.venv\Scripts\Activate.ps1`，CMD 运行 `.venv\Scripts\activate.bat`。无需激活也可直接用 `.venv/bin/python` 或 `.\.venv\Scripts\python.exe` 替代下文的 `python`。
+
+```sh
 python -m pip install kaggle==2.2.4
 
-# Kaggle CLI / SDK 联机操作必须配置 API Key 鉴权：
-export KAGGLE_API_TOKEN="YOUR_KAGGLE_API_KEY"
+# 首次配置：按提示输入 API Token，输入不回显，保存到本机 JSON
+python scripts/kaggle_comfy.py configure
 python scripts/kaggle_comfy.py quota
 ```
 
-你可以把以下一句话(替换秘钥后)发给你的智能体进行安装skill：
+API Token 只需配置一次，重开终端、Agent 或电脑后自动读取，无需再执行 `export`。默认保存位置是 Linux/macOS 的 `~/.kaggle/kaggle-comfyui.json`，Windows 的 `%USERPROFILE%\.kaggle\kaggle-comfyui.json`，格式如下：
 
-```
-请帮我安装并配置 kaggle-comfyui-skill：通过 git clone https://github.com/riyuexingchennnn/kaggle-comfyui-skill.git 将技能安装到 skills 目录，并通过 export KAGGLE_API_TOKEN="YOUR_KAGGLE_API_KEY" 设置环境变量配置 Kaggle API Key，完成依赖安装 kaggle==2.2.4 后运行 python scripts/kaggle_comfy.py quota 校验额度。
+```json
+{
+  "api_token": "YOUR_KAGGLE_API_TOKEN"
+}
 ```
 
-复制所需运行配置，填写本人的 Kaggle 用户名、私有数据集、实际挂载路径和文件 SHA256，并核对工作流中的模型名。API Key 仅通过上述环境变量配置。示例不含模型权重或私人素材；自定义工作流准备方法见 [工作流说明](references/workflows.md)。
+这是本 Skill 的本地明文 JSON 配置，保存在仓库外；脚本自动将 API Token 传给官方 CLI/SDK。Token 失效、过期或更换时重新运行 `configure`。权限与非交互配置方法见 [操作说明](references/operations.md)。
+
+复制所需运行配置，填写本人的 Kaggle 用户名、私有数据集、实际挂载路径和文件 SHA256，并核对工作流中的模型名。示例不含模型权重或私人素材；自定义工作流准备方法见 [工作流说明](references/workflows.md)。
 
 ```sh
 # 下面以 Anima 为例；配置修改完成后再执行

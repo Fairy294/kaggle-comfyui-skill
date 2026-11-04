@@ -16,12 +16,10 @@ models/
 .env.*
 !.env.example
 kaggle.json
+kaggle-comfyui.json
 credentials.json
 access_token
 *.pem
 *.key
-*.mp4
-*.png
-*.jpg
 *.zip
 *.egg-info/

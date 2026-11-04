@@ -2,16 +2,35 @@
 
 ## 环境与认证
 
-本地需要 Python 3.11+ 和支持 POSIX flock 的 Linux/macOS 环境。离线 `validate`、`prepare` 仅用标准库；联机操作使用官方 `kaggle==2.2.4` CLI/SDK。建议在虚拟环境安装依赖，使用同一解释器检查 `python -m pip show kaggle`。
+本地支持 Windows、Linux 和 macOS，需要 Python 3.11+。离线 `validate`、`prepare` 和 `configure` 仅用标准库；联机操作使用官方 `kaggle==2.2.4` CLI/SDK。建议在虚拟环境安装依赖，使用同一解释器检查 `python -m pip show kaggle`；子进程也使用该解释器，无需另行配置 `kaggle` 可执行文件路径。提交锁在 Windows 使用 `msvcrt`，在 Linux/macOS 使用 `fcntl`。
 
-所有 Kaggle CLI/SDK 联机操作都使用环境变量配置 API Key：
+API Token 由用户通过 [Kaggle 官方设置](https://www.kaggle.com/settings/api) 的 API Tokens 创建。首次配置运行：
 
 ```sh
-export KAGGLE_API_TOKEN="YOUR_KAGGLE_API_KEY"
+python scripts/kaggle_comfy.py configure
 python scripts/kaggle_comfy.py quota
 ```
 
-API Key 由用户通过 Kaggle 官方设置创建并在本机配置。不运行登录脚本，不将 API Key 写入仓库或日志；认证失败时检查本机环境变量。
+`configure` 提示输入 API Token，不回显输入；成功时仅显示保存路径。持久化文件通过 `Path.home()` 定位：
+
+| 系统 | 默认文件 |
+| --- | --- |
+| Linux/macOS | `~/.kaggle/kaggle-comfyui.json` |
+| Windows | `%USERPROFILE%\.kaggle\kaggle-comfyui.json` |
+
+```json
+{
+  "api_token": "YOUR_KAGGLE_API_TOKEN"
+}
+```
+
+这是本 Skill 的配置格式。官方 Token 文件方式使用 `~/.kaggle/access_token`（纯文本），不能直接换成上述 JSON，见 [官方认证说明](https://github.com/Kaggle/kaggle-cli/blob/main/docs/README.md#authentication)。本脚本每次从 JSON 读取 API Token，临时通过 `KAGGLE_API_TOKEN` 传给官方 SDK 或 CLI 子进程；JSON 优先于 shell 中的旧值，不修改宿主 shell，也不要求用户执行 `export`。重开终端、Agent 或电脑后仍然可用；Token 失效、过期或更换时重新运行 `configure`。
+
+用户已提供 API Token 时，Agent 直接运行 `python scripts/kaggle_comfy.py configure --token-stdin`，通过子进程标准输入传入一行 Token，完成保存与额度校验；按用户指令更新已有配置，不再要求用户自行运行命令。不要将 Token 拼进 shell 命令、命令参数，或复述到聊天和日志。用户未提供时先复用本机 JSON；配置缺失时才请用户提供 Token 或使用隐藏输入。也可由用户在上述位置编辑 JSON，字段必须为 `api_token`。没有安全输入终端时，默认配置命令会报错，不降级为回显输入。
+
+JSON 为本机明文配置，放在仓库外。Linux/macOS 写入文件权限为 `0600`；Windows 使用用户目录继承的访问权限，应仅允许本人和必要的系统账户访问。不要将 API Token 写入 Skill、任务配置、工作流或上传到 Kaggle。认证失败时检查该 JSON 与 Token 有效性，不显示内容；离线校验和准备不读取 Token。
+
+需要执行其他官方 CLI 命令时，通过 `python scripts/kaggle_comfy.py kaggle -- ...` 复用同一 JSON。例如 `python scripts/kaggle_comfy.py kaggle -- datasets status your-kaggle-user/private-model-cache --format json`。该入口不重试，单次最多 900 秒；写请求超时先核对远端，不能据此盲目重发。GPU 任务仍按下文 `submit` 流程提交。
 
 ## 运行配置
 
@@ -47,6 +66,8 @@ API Key 由用户通过 Kaggle 官方设置创建并在本机配置。不运行�
 
 | 命令 | 行为与边界 |
 | --- | --- |
+| `configure` | 本地持久化 API Token；默认隐藏输入，`--token-stdin` 支持非交互输入，不联机、不用 GPU |
+| `kaggle -- ...` | 从 JSON 加载 API Token 后调用同一解释器的官方 CLI |
 | `validate` | 本地检查配置与 API 图，不确认模型文件存在或节点已安装 |
 | `prepare` | 本地创建任务目录和唯一 UUID，不写入云端、不使用 GPU |
 | `submit` | 在用户授权后带 `--confirm-remote-execution` 执行；先查实时额度，再持久化提交标记并发出一次私有任务请求 |

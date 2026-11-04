@@ -11,9 +11,9 @@ description: 在 Kaggle 官方免费额度内部署并运行 ComfyUI API 工作�
 
 ## 开始前
 
-1. 使用终端工具或系统命令行执行本目录下的脚本。Python 3.11+；本地校验仅用标准库。联机操作需要官方 `kaggle==2.2.4` CLI/SDK，已有新版本须先核验兼容性，不静默升级。
+1. 使用终端工具或系统命令行执行本目录下的脚本，支持 Windows、Linux 和 macOS。Python 3.11+；本地校验与 Token 配置仅用标准库。联机操作需要官方 `kaggle==2.2.4` CLI/SDK，已有新版本须先核验兼容性，不静默升级。
 2. 将源代码仓库保留为干净 Skill；运行文件放在独立、可写的开发目录。不要把任务、模型、个人图片、视频或凭证提交到 Git。
-3. 读取 [references/operations.md](references/operations.md)，核实账号、Kaggle 资格、输入挂载和授权。涉及反复下载或权重缓存时，读取 [references/model-cache.md](references/model-cache.md)：用户授权后一次性保存为本人私有数据集，CPU核验实际挂载路径/hash，再优先复用；未就绪时不得称已缓存。所有 Kaggle CLI/SDK 联机操作均需通过 API Key 鉴权，仅通过 `export KAGGLE_API_TOKEN="YOUR_KAGGLE_API_KEY"` 设置环境变量配置。API Key 由用户通过 Kaggle 官方设置创建并在本机环境中配置；不复述或上传 API Key。
+3. 读取 [references/operations.md](references/operations.md)，核实账号、Kaggle 资格、输入挂载和授权。所有联机操作使用 API Token，持久化保存在本机用户目录的 `.kaggle/kaggle-comfyui.json`，脚本每次自动读取。用户提供了 Token 时，Agent 直接通过 `python scripts/kaggle_comfy.py configure --token-stdin` 的标准输入完成保存，按用户指令更新已有配置，再校验额度，不把这些操作交回用户。未提供 Token 时先复用本机配置；确实缺失时才请用户提供或指导安全输入，不要求反复设置 shell 环境变量。API Token 由用户在 Kaggle 官方设置中创建；不回显、复述、上传或写入命令参数、Skill、任务目录和工作流。涉及反复下载或权重缓存时，读取 [references/model-cache.md](references/model-cache.md)：用户授权后一次性保存为本人私有数据集，CPU核验实际挂载路径/hash，再优先复用；未就绪时不得称已缓存。
 4. 查询真实额度：`python scripts/kaggle_comfy.py quota`。30 小时 GPU /20 小时 TPU 不是保证值，以官方当前返回为准。此 CUDA 工作流不能把 TPU 时长直接当 GPU 使用。
 5. 确认工作流、模型许可、分辨率、帧率、预计耗时、交付形式及是否允许消耗额度。不以“免费”为由自动启动；不轮换账号、绕过配额或修改平台限制。
 
@@ -23,7 +23,7 @@ description: 在 Kaggle 官方免费额度内部署并运行 ComfyUI API 工作�
 2. 按用户工作流填写本次运行配置：本人账号、私有数据集、实际挂载路径、代码版本及模型与素材 SHA256。配套示例和对应说明从 [references/workflows.md](references/workflows.md) 按需选择；零哈希占位值须替换。
 3. 根据用户选择的模型核对加载节点、文件名、采样参数、保存节点与许可；节点须对照目标 `/object_info`。具体版本和预期文件校验值以本次配置为准，示例参数只用于对应示例。任务日志、实际工作流、输出清单和验收记录保存在独立任务目录。
 4. 离线检查：`python scripts/kaggle_comfy.py validate --spec RUN.json --workflow WORKFLOW.json`。这只检查格式、引用、循环、路径、来源和固定版本；不是实际模型运行成功证明。
-5. 离线准备：`python scripts/kaggle_comfy.py prepare --spec RUN.json --workflow WORKFLOW.json --jobs-dir /absolute/writable/jobs`。记录返回的任务目录与 UUID；`prepare` 不调用 Kaggle、不用 GPU。
+5. 离线准备：`python scripts/kaggle_comfy.py prepare --spec RUN.json --workflow WORKFLOW.json --jobs-dir JOBS_DIR`。`JOBS_DIR` 替换为本机独立可写目录的绝对路径，含空格时加引号。记录返回的任务目录与 UUID；`prepare` 不调用 Kaggle、不用 GPU。
 6. 在用户明确授权后，用已配置 Kaggle SDK 的同一个 Python 解释器运行：`python scripts/kaggle_comfy.py submit --job JOB_DIR --confirm-remote-execution`。提交前再次查询额度，要求“最大会话时长 +5分钟余量”不超过剩余额度。任务始终私有，自动带唯一 slug；只提交一次。超时/未知返回先按该 slug 核对远端，禁止删除本地提交标记后盲目重投。
 7. 先 `status --job JOB_DIR` 核对远端，随后 `logs --job JOB_DIR --seconds 20` 有界读取日志。运行中必须区分安装、等待服务、排队、生成和解码。只报告真实 `KAGGLE_COMFY` 事件；“GENERATING”与心跳不等于某个采样步数或完成百分比。
 8. 用户要求后台监测时，使用环境提供且已获授权的定时/异步机制，按用户要求和预计耗时设置检查频率。提交后立即检查状态并读取有界日志；巡检记录任务 UUID、路径、命令、失败处理、交付要求和清除条件。**本仓库不会自己创建宿主定时任务**。完成或不可恢复失败后清除对应巡检，并另行确认云端会话状态。
