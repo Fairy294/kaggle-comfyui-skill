@@ -19,7 +19,10 @@ python scripts/kaggle_comfy.py quota
 ```
 
 你可以把以下一句话(替换秘钥后)发给你的智能体进行安装skill：
-> 请帮我安装并配置 kaggle-comfyui-skill：通过 git clone https://github.com/riyuexingchennnn/kaggle-comfyui-skill.git 将技能安装到 skills 目录，并通过 export KAGGLE_API_TOKEN="YOUR_KAGGLE_API_KEY" 设置环境变量配置 Kaggle API Key，完成依赖安装 kaggle==2.2.4 后运行 python scripts/kaggle_comfy.py quota 校验额度。
+
+```
+请帮我安装并配置 kaggle-comfyui-skill：通过 git clone https://github.com/riyuexingchennnn/kaggle-comfyui-skill.git 将技能安装到 skills 目录，并通过 export KAGGLE_API_TOKEN="YOUR_KAGGLE_API_KEY" 设置环境变量配置 Kaggle API Key，完成依赖安装 kaggle==2.2.4 后运行 python scripts/kaggle_comfy.py quota 校验额度。
+```
 
 复制所需运行配置，填写本人的 Kaggle 用户名、私有数据集、实际挂载路径和文件 SHA256，并核对工作流中的模型名。API Key 仅通过上述环境变量配置。示例不含模型权重或私人素材；自定义工作流准备方法见 [工作流说明](references/workflows.md)。
 
