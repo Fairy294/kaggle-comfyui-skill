@@ -18,7 +18,7 @@ SaveVideo 在固定版本使用动态组合输入：format=auto，format.codec=a
 
 ## Anima Turbo v1.1
 
-`assets/anima-turbo.workflow.json` 与同名前缀 spec：分离UNET/Qwen3_0.6B/QwenImageVAE，官方示例CLIPtype=stable_diffusion、EmptyLatentImage，1024×1024、10步、CFG1、Euler/simple。不是SDXL检查点。模型三hash已填，但账号路径需配置；非商业许可，见Anima专用说明。
+`assets/anima-turbo.workflow.json` 与同名前缀 spec：以 Civitai 嘉依卡示例图140742450为准，分离UNET/Qwen3_0.6B/QwenImageVAE，CLIPtype=stable_diffusion/device=default，ResolutionSelector(3:4,1.2MP,16) → EmptyLatentImage，实际976×1296、8步、CFG1、Euler/simple、种子758641017238633。批处理版仅将PreviewImage改为SaveImage；未改作者API/UI及来源另存为anima-chaika-original.api.json、anima-chaika-original.ui.json、anima-chaika-source.json。ResolutionSelector是固定ComfyUI的内置节点，不安装同名第三方插件。不是SDXL检查点；非商业许可，见Anima专用说明。
 
 ## H3 专项迁移
 

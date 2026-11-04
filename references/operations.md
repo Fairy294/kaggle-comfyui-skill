@@ -32,6 +32,12 @@
 
 挂载路径要先在 Kaggle Input 面板或 CPU-only notebook 确认，工具不会猜数据集 slug 与文件系统目录关系。哈希可用 `sha256sum file` 计算。零哈希示例不是真实模型 hash。
 
+### 模型缓存与挂载
+
+重复使用的权重优先保存为本人私有 Dataset，流程见 `references/model-cache.md`（从Skill入口直接读取）。将实际数据集引用填入 `datasets`；`models[].source` 必须来自 Input面板或CPU-only核验的真实路径。禁止把slug到目录的猜测写作平台保证。
+
+`parent_kernels` 是此前输出的可选来源，不等于持久模型Dataset。上游目录层级和实际挂载形式均需扫描核实；不能用“只能平铺、子目录绝对不能挂载”概括此前某次层级错配。未核验跨Kernel路径时使用已验证Dataset；都不可用时才考虑单独授权的内核直下载。
+
 ## 私有批处理生命周期
 
 - validate、prepare：本地，无写云端或GPU。

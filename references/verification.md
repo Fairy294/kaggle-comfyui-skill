@@ -20,7 +20,8 @@ python scripts/check_release.py
 - 已验证：离线参数/图引用/路径检查，提交marker防重入，未知响应阻止第二次提交，预算门禁，SDK请求字段序列化，history成功/失败识别，下载清单/hash/身份验算，示例结构，语法与隐私扫描。
 - 只读联机：当前官方配额查询。它不消耗新GPU，但不证明新增runner可以在云端完成图像/视频。
 - 已增加核验：Anima官方PNG内嵌节点与Civitai/HF元数据一致；H3真实历史图脱敏迁移、profile版本门禁、固定上游源码补丁试应用/编译、生成kernel嵌入模块与原生帧history路径检查。此类离线/元数据核验不等于GPU计算。
-- 尚未验证：此版本通用runner、Anima模板和H3专用profile在Kaggle GPU上安装、队列、完整采样及输出端到端。没有为本次重构额外消耗GPU；不能拿旧H3专项成片当这份runner实测结果。
+- 专项GPU证据：2026-11-04嘉依卡作者原版10节点API由独立inline-download/preview捕获runner完成一次T4运行，三个模型hash核验通过，8步976×1296，工作流20.358秒、容器执行160.7秒，实际新图已检查并交付。详见Anima专用说明。
+- 尚未验证：此版本通用挂载runner和H3专用profile在Kaggle GPU上安装、队列、完整采样及输出端到端。不能拿Anima专项或旧H3成片冒称这份通用runner实测结果；私有数据集建立/挂载也需每个账号实测。
 - 上游可变：Kaggle镜像、torch/CUDA、ComfyUI requirements和模型/插件兼容性。本工具固定Git提交与模型hash，但未全锁传递依赖。首次GPU小任务仍需单独授权、足够额度和实际视觉复核。
 - 不提供：任意工作流保证运行/任意模型自动双卡并行（仅H3显式profile）/自动分段改图/TPU适配/自动额度续杯/账号池/取消猜ID/断点续传/全自动画质打分。
 
