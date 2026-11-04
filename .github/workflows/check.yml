@@ -30,3 +30,8 @@ jobs:
           python scripts/kaggle_comfy.py validate --spec assets/h3-character-swap.spec.json --workflow assets/h3-character-swap.workflow.json
       - name: Public-file and secret-pattern audit
         run: python scripts/check_release.py
+      - name: Install and check local CLI dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip check
+          python -c "import six; from importlib.metadata import version; print('kaggle=' + version('kaggle') + ', six=' + six.__version__)"

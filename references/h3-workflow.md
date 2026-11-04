@@ -8,7 +8,7 @@
 - [运行配置](../assets/h3-character-swap.spec.json)：模型、输入、插件、代码版本、启动参数与预期文件校验值。
 - [兼容实现](../scripts/h3_compat.py)：源码兼容处理、两卡拷贝预检和 H3NativeVideoSave 节点。
 
-当前 runner 与此预设尚未完成 Kaggle GPU 端到端验证，准备文件和离线测试通过后仍需实际验证，见 [验证说明](verification.md)。
+H3 专用运行路径与此预设仍缺 Kaggle GPU 端到端证据；Anima 横幅图的成功反馈不覆盖 H3，准备文件和离线测试通过后仍需实际验证，见 [验证说明](verification.md)。
 
 ## 机器与版本要求
 

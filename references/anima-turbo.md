@@ -25,7 +25,7 @@ Anima 使用分离组件，不能直接套用 SDXL 整合检查点的加载方�
 
 先将有权使用的模型放入本人私有 Dataset，核对实际挂载文件与运行配置；重复使用时按 [模型缓存流程](model-cache.md) 准备。当前 runner 读取挂载文件，不负责在线下载权重。
 
-按 [通用操作流程](operations.md) 校验、准备和提交任务，完成后执行 [下载与验收](quality-and-recovery.md)。该预设与当前 runner 尚未完成 Kaggle GPU 端到端验证，离线结构检查不代表云端兼容性或画质通过；验证范围见 [验证说明](verification.md)。
+按 [通用操作流程](operations.md) 校验、准备和提交任务，完成后执行 [下载与验收](quality-and-recovery.md)。原始竖幅预设仍缺独立 Kaggle GPU 端到端证据；修改后横幅图的单次成功反馈与离线结构检查均不能推广为其他配置或画质验收通过。验证范围见 [验证说明](verification.md)。
 
 ## 许可
 

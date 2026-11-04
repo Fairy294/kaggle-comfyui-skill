@@ -1,10 +1,21 @@
 # 配置和运行契约
 
+## 自动安装与配置
+
+README 的简短复制指令包含完整安装配置流程，由 Agent 执行：
+
+1. 定位当前 Agent 实际加载的 skills 目录，从用户指定的仓库安装；已有安装先核对并复用，保留本地修改。
+2. 在本地虚拟环境安装 `requirements.txt` 中的依赖，并运行 `python -m pip check`。
+3. 用户已提供 API Token 时，通过 `configure --token-stdin` 持久化保存；未提供时先复用本机 JSON。Token 不回显，不拼入 shell 命令或命令参数。
+4. 使用同一 Python 解释器运行 `quota`，向用户报告实际安装位置、配置状态和真实剩余额度。缺少 Token 且本机没有可用配置，或遇到无法自行解决的错误时，再说明具体缺项。
+
+简短请求中的“自动保存配置”按本文件的 JSON 路径和权限规则执行；安装配置只进行本地操作和只读额度查询，GPU 生图按工作流运行授权另行处理。下文保留命令与格式，供 Agent 自动执行及用户选择手动操作时参考。
+
 ## 环境与认证
 
-本地支持 Windows、Linux 和 macOS，需要 Python 3.11+。离线 `validate`、`prepare` 和 `configure` 仅用标准库；联机操作使用官方 `kaggle==2.2.4` CLI/SDK。建议在虚拟环境安装依赖，使用同一解释器检查 `python -m pip show kaggle`；子进程也使用该解释器，无需另行配置 `kaggle` 可执行文件路径。提交锁在 Windows 使用 `msvcrt`，在 Linux/macOS 使用 `fcntl`。
+本地支持 Windows、Linux 和 macOS，需要 Python 3.11+。离线 `validate`、`prepare` 和 `configure` 仅用标准库；联机操作在虚拟环境运行 `python -m pip install -r requirements.txt`，安装官方 `kaggle==2.2.4` CLI/SDK 与 `six==1.17.0`，随后运行 `python -m pip check`。`kaggle==2.2.4` 实际导入 `six`，但未声明该依赖，不能依赖其他包间接安装它。子进程也使用同一解释器，无需另行配置 `kaggle` 可执行文件路径。提交锁在 Windows 使用 `msvcrt`，在 Linux/macOS 使用 `fcntl`。
 
-API Token 由用户通过 [Kaggle 官方设置](https://www.kaggle.com/settings/api) 的 API Tokens 创建。首次配置运行：
+API Token 由用户通过 [Kaggle 官方设置](https://www.kaggle.com/settings/api) 的 API Tokens 创建。用户选择手动命令行配置时运行：
 
 ```sh
 python scripts/kaggle_comfy.py configure
@@ -79,6 +90,8 @@ JSON 为本机明文配置，放在仓库外。Linux/macOS 写入文件权限为
 提交要求剩余 GPU 额度覆盖“最大会话时长 +5 分钟余量”。提交超时或返回未知时，保留 `submission.json`，按唯一任务引用核对远端状态；不要删除标记或重新 `prepare` 绕过单次提交限制。
 
 下载中断后保留已有文件并核查，工具不自动覆盖或断点续传。恢复步骤见 [验收与排错](quality-and-recovery.md)。取消任务使用 Kaggle 对应会话的 Stop Session；关闭宿主巡检后仍须确认云端会话已停止。
+
+`download` 和 `verify` 的报告使用 `local_files` 表示本任务下载目录下当前已有的普通文件数，包含日志、清单和媒体；`downloaded_this_run` 只统计这次命令实际下载的文件，单独运行 `verify` 时为 `0`。原字段 `downloaded_files` 已由这两个字段替代，避免 `null` 被误读为文件丢失。`artifacts` 仍只统计成功结果清单中通过大小与 SHA256 检查的媒体产物；本地文件数不表示所有日志都做了哈希校验。
 
 ## 执行边界
 

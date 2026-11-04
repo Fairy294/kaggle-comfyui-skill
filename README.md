@@ -26,7 +26,7 @@
 将下面的 `YOUR_KAGGLE_API_TOKEN` 替换为你的 Kaggle API Token，再发给智能体，由它完成安装、配置和额度校验：
 
 ```
-请帮我安装并配置 kaggle-comfyui-skill：通过 git clone https://github.com/riyuexingchennnn/kaggle-comfyui-skill.git 将技能安装到当前 Agent 的 skills 目录，安装依赖 kaggle==2.2.4。我的 Kaggle API Token 是 YOUR_KAGGLE_API_TOKEN，请直接通过 python scripts/kaggle_comfy.py configure --token-stdin 的标准输入将其持久化保存到本机用户目录的 .kaggle/kaggle-comfyui.json（已有配置则更新），不要回显 Token 或将其写入命令参数、日志和仓库。随后运行 python scripts/kaggle_comfy.py quota 校验额度，由你完成以上操作。
+请从 https://github.com/riyuexingchennnn/kaggle-comfyui-skill.git 安装这个 skill。我的 Kaggle API Token 是 YOUR_KAGGLE_API_TOKEN，请自动保存配置并验证剩余额度。
 ```
 
 也可以通过命令行安装配置：
@@ -40,7 +40,8 @@ python -m venv .venv
 激活虚拟环境：Linux/macOS 运行 `source .venv/bin/activate`；Windows PowerShell 运行 `.\.venv\Scripts\Activate.ps1`，CMD 运行 `.venv\Scripts\activate.bat`。无需激活也可直接用 `.venv/bin/python` 或 `.\.venv\Scripts\python.exe` 替代下文的 `python`。
 
 ```sh
-python -m pip install kaggle==2.2.4
+python -m pip install -r requirements.txt
+python -m pip check
 
 # 首次配置：按提示输入 API Token，输入不回显，保存到本机 JSON
 python scripts/kaggle_comfy.py configure

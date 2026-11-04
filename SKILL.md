@@ -9,9 +9,11 @@ description: 在 Kaggle 官方免费额度内部署并运行 ComfyUI API 工作�
 
 给仓库使用者的中文首页与快速开始见 [README.md](README.md)；Agent 执行任务仍以本文件的操作规则为准。
 
+收到“从链接安装此 Skill、保存 API Token、验证额度”这样的简短请求时，按 [自动安装与配置](references/operations.md) 完成安装位置选择、依赖安装、Token 持久化和真实额度查询，再报告安装位置、配置状态与剩余额度。用户无需提供具体脚本命令；本文件和操作文档保留 Agent 执行所需的命令细节。
+
 ## 开始前
 
-1. 使用终端工具或系统命令行执行本目录下的脚本，支持 Windows、Linux 和 macOS。Python 3.11+；本地校验与 Token 配置仅用标准库。联机操作需要官方 `kaggle==2.2.4` CLI/SDK，已有新版本须先核验兼容性，不静默升级。
+1. 使用终端工具或系统命令行执行本目录下的脚本，支持 Windows、Linux 和 macOS。Python 3.11+；本地校验与 Token 配置仅用标准库。联机依赖按 [requirements.txt](requirements.txt) 安装：`python -m pip install -r requirements.txt`，包含官方 `kaggle==2.2.4` CLI/SDK 与其未声明的依赖 `six==1.17.0`。已有新版本须先核验兼容性，不静默升级；安装后运行 `python -m pip check`，认证配置后运行 `quota` 检查实际可用性。
 2. 将源代码仓库保留为干净 Skill；运行文件放在独立、可写的开发目录。不要把任务、模型、个人图片、视频或凭证提交到 Git。
 3. 读取 [references/operations.md](references/operations.md)，核实账号、Kaggle 资格、输入挂载和授权。所有联机操作使用 API Token，持久化保存在本机用户目录的 `.kaggle/kaggle-comfyui.json`，脚本每次自动读取。用户提供了 Token 时，Agent 直接通过 `python scripts/kaggle_comfy.py configure --token-stdin` 的标准输入完成保存，按用户指令更新已有配置，再校验额度，不把这些操作交回用户。未提供 Token 时先复用本机配置；确实缺失时才请用户提供或指导安全输入，不要求反复设置 shell 环境变量。API Token 由用户在 Kaggle 官方设置中创建；不回显、复述、上传或写入命令参数、Skill、任务目录和工作流。涉及反复下载或权重缓存时，读取 [references/model-cache.md](references/model-cache.md)：用户授权后一次性保存为本人私有数据集，CPU核验实际挂载路径/hash，再优先复用；未就绪时不得称已缓存。
 4. 查询真实额度：`python scripts/kaggle_comfy.py quota`。30 小时 GPU /20 小时 TPU 不是保证值，以官方当前返回为准。此 CUDA 工作流不能把 TPU 时长直接当 GPU 使用。

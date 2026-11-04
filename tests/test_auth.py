@@ -158,6 +158,24 @@ class TokenTests(unittest.TestCase):
         self.assertEqual(run.call_args.kwargs["env"]["KAGGLE_API_TOKEN"], TOKEN)
         self.assertNotIn(TOKEN, output.getvalue())
 
+    def test_missing_sdk_dependency_has_installation_error_without_token(self):
+        self.save()
+        original_import = __import__
+
+        def import_without_six(name, *args, **kwargs):
+            if name == "kaggle.api.kaggle_api_extended":
+                raise ModuleNotFoundError("No module named 'six'", name="six")
+            return original_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=import_without_six):
+            with self.assertRaises(RuntimeError) as error:
+                kaggle_comfy.api_client()
+        message = str(error.exception)
+        self.assertIn("six", message)
+        self.assertIn("requirements.txt", message)
+        self.assertNotIn("authentication failed", message)
+        self.assertNotIn(TOKEN, message)
+
     def test_logs_use_saved_token_and_redact_saved_output(self):
         self.save()
         job = self.home / "job"

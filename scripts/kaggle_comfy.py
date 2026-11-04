@@ -136,9 +136,11 @@ def api_client():
     with api_token_environment():
         try:
             from kaggle.api.kaggle_api_extended import KaggleApi
-        except ImportError:
+        except ImportError as error:
             raise RuntimeError(
-                "Install optional pinned kaggle dependency in a local venv"
+                "Kaggle dependency import failed ("
+                + (error.name or "unknown module")
+                + "); install local dependencies with python -m pip install -r requirements.txt"
             ) from None
         try:
             api = KaggleApi()
@@ -488,11 +490,18 @@ def verify_download(job, collected=None):
     result = read_json(task / "result.json")
     if result.get("task_id") != identity["task_id"]:
         raise ValueError("Downloaded result task identity mismatch")
+    file_counts = {
+        "local_files": sum(
+            1 for path in task.rglob("*") if path.is_file() and not path.is_symlink()
+        ),
+        "downloaded_this_run": len(collected) if collected is not None else 0,
+    }
     if result.get("state") != "COMPLETED":
         report = {
             "task_id": identity["task_id"],
             "generation_state": result.get("state"),
             "diagnostics_downloaded": True,
+            **file_counts,
             "visual_accepted": False,
         }
         atomic_json(job / "download-verification.json", report)
@@ -525,7 +534,7 @@ def verify_download(job, collected=None):
         "generation_state": "COMPLETED",
         "integrity_verified": True,
         "artifacts": len(outputs["outputs"]),
-        "downloaded_files": len(collected) if collected is not None else None,
+        **file_counts,
         "visual_accepted": False,
         "note": "Inspect images/video frames and seams before delivery; no added labels",
     }

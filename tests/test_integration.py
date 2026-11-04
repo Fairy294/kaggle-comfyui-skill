@@ -72,6 +72,31 @@ class LocalIntegrationTests(unittest.TestCase):
             self.assertTrue(result["integrity_verified"])
             self.assertFalse(result["visual_accepted"])
 
+    def test_verify_keeps_local_file_count_after_download(self):
+        with tempfile.TemporaryDirectory() as directory:
+            job = kaggle_comfy.prepare(spec(), workflow(), Path(directory))
+            task = fixture_download(job)
+            for number in range(8):
+                (task / f"diagnostic-{number}.log").write_text("test\n", encoding="utf-8")
+            (task / "empty-directory").mkdir()
+            (job / "downloads/unrelated.log").write_text("other task\n", encoding="utf-8")
+            collected = [
+                str(path.relative_to(job / "downloads"))
+                for path in task.rglob("*") if path.is_file()
+            ]
+
+            downloaded = kaggle_comfy.verify_download(job, collected)
+            self.assertEqual(downloaded["local_files"], 13)
+            self.assertEqual(downloaded["downloaded_this_run"], 13)
+            verified = kaggle_comfy.verify_download(job)
+            self.assertEqual(verified["local_files"], 13)
+            self.assertEqual(verified["downloaded_this_run"], 0)
+            self.assertEqual(verified["artifacts"], 1)
+            self.assertNotIn("downloaded_files", verified)
+            self.assertEqual(
+                common.read_json(job / "download-verification.json"), verified
+            )
+
     def test_corrupted_artifact_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             job = kaggle_comfy.prepare(spec(), workflow(), Path(directory))
@@ -103,9 +128,10 @@ class LocalIntegrationTests(unittest.TestCase):
             d = common.read_json(task / "result.json")
             d["state"] = "FAILED"
             common.atomic_json(task / "result.json", d)
-            self.assertEqual(
-                kaggle_comfy.verify_download(job)["generation_state"], "FAILED"
-            )
+            report = kaggle_comfy.verify_download(job)
+            self.assertEqual(report["generation_state"], "FAILED")
+            self.assertEqual(report["local_files"], 5)
+            self.assertEqual(report["downloaded_this_run"], 0)
 
     def test_download_hostname_allowlist(self):
         for value in [

@@ -12,6 +12,7 @@ TOP = {
     "README.md",
     "SKILL.md",
     "LICENSE",
+    "requirements.txt",
     ".gitignore",
     "assets",
     "scripts",

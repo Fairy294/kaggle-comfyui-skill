@@ -1,0 +1,3 @@
+# Local Kaggle CLI/SDK; kaggle 2.2.4 imports six without declaring it.
+kaggle==2.2.4
+six==1.17.0

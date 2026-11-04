@@ -13,6 +13,8 @@ python scripts/kaggle_comfy.py validate --spec assets/h3-character-swap.spec.jso
 python scripts/check_release.py
 ```
 
+本地联机依赖单独检查：`python -m pip install -r requirements.txt`、`python -m pip check`。清单固定 `kaggle==2.2.4` 与 `six==1.17.0`，避免依赖未声明的间接安装。CI 在各平台安装该清单并检查依赖与 `six` 导入；这一安装步骤需要网络，离线单元测试本身仍只用标准库。配置 API Token 后，运行 `python scripts/kaggle_comfy.py quota` 才能检查真实认证与平台访问。
+
 测试默认不访问真实账号、网络或 GPU；认证测试仅在临时目录使用虚构 API Token。覆盖 JSON 持久化、新进程自动读取、SDK/CLI/日志的 Token 加载与脱敏、离线准备不读取或上传 Token、跨进程提交锁，以及配置与 API 图校验、预算判断、单次提交保护、模拟状态与下载、文件完整性、运行结果识别及专用 profile 的部分兼容边界。
 
 CI 配置了 Windows、Linux、macOS 与 Python 3.11/3.12 的离线检查矩阵。Windows 账号没有符号链接权限时，仅跳过对应链接防护测试；其余测试仍执行。CI 配置本身不代表已经在这些平台运行通过，以实际检查结果为准。
