@@ -18,6 +18,14 @@ TOP = {
     "references",
     "tests",
     ".github",
+    "doc",
+}
+DOC_IMAGE_LIMIT = 10_000_000
+DOC_IMAGE_HEADERS = {
+    ".png": (b"\x89PNG\r\n\x1a\n",),
+    ".jpg": (b"\xff\xd8\xff",),
+    ".jpeg": (b"\xff\xd8\xff",),
+    ".gif": (b"GIF87a", b"GIF89a"),
 }
 RULES = {
     "credential-pattern": re.compile(
@@ -63,8 +71,18 @@ def main():
         ):
             failures.append((str(relative), "nonpublic-path"))
             continue
-        if path.is_symlink() or path.stat().st_size > 300_000:
+        doc_image = (
+            relative.parts[0] == "doc" and path.suffix.lower() in DOC_IMAGE_HEADERS
+        )
+        size_limit = DOC_IMAGE_LIMIT if doc_image else 300_000
+        if path.is_symlink() or path.stat().st_size > size_limit:
             failures.append((str(relative), "symlink-or-large-file"))
+            continue
+        if doc_image:
+            with path.open("rb") as handle:
+                header = handle.read(8)
+            if not header.startswith(DOC_IMAGE_HEADERS[path.suffix.lower()]):
+                failures.append((str(relative), "invalid-doc-image"))
             continue
         try:
             text = path.read_text(encoding="utf-8")
@@ -81,7 +99,7 @@ def main():
             ast.parse(text, filename=str(relative))
         if path.suffix == ".json":
             json.loads(text)
-    skill = (ROOT / "SKILL.md").read_text()
+    skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
     for target in re.findall(r"\]\(([^)]+)\)", skill):
         if not target.startswith("https://") and not (ROOT / target).is_file():
             failures.append(("SKILL.md", "missing-linked-resource"))
